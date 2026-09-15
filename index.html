@@ -1,0 +1,3693 @@
+<!DOCTYPE html>
+<html lang="km">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dubbing Pro - បកប្រែវីដេអូស្វ័យប្រវត្តិ</title>
+    <!-- Google Fonts: Kantumruy Pro for Khmer, Inter for English/Numbers -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Kantumruy+Pro:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-dark: #07050f;
+            --bg-app: #0b0914;
+            --bg-card: rgba(22, 18, 41, 0.7);
+            --bg-card-hover: rgba(30, 25, 55, 0.85);
+            --border-glow: rgba(0, 240, 255, 0.15);
+            --border-standard: rgba(255, 255, 255, 0.07);
+            
+            --color-cyan: #00e5ff;
+            --color-cyan-glow: rgba(0, 229, 255, 0.4);
+            --color-purple: #7c4dff;
+            --color-purple-glow: rgba(124, 77, 255, 0.4);
+            --color-blue: #2979ff;
+            
+            --text-primary: #ffffff;
+            --text-secondary: #89869c;
+            --text-muted: #625f75;
+            
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Light Mode Variables Override */
+        [data-theme="light"] {
+            --bg-dark: #f0f2f5;
+            --bg-app: #ffffff;
+            --bg-card: rgba(243, 244, 246, 0.8);
+            --bg-card-hover: rgba(229, 231, 235, 0.9);
+            --border-glow: rgba(124, 77, 255, 0.1);
+            --border-standard: rgba(0, 0, 0, 0.08);
+            
+            --color-cyan: #00acc1;
+            --color-cyan-glow: rgba(0, 172, 193, 0.2);
+            --color-purple: #6200ea;
+            --color-purple-glow: rgba(98, 0, 234, 0.2);
+            
+            --text-primary: #111827;
+            --text-secondary: #4b5563;
+            --text-muted: #9ca3af;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Kantumruy Pro', 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+            transition: var(--transition);
+        }
+
+        /* Responsive Main Container */
+        .phone-frame {
+            width: 100%;
+            max-width: 1000px;
+            height: 90vh;
+            max-height: 850px;
+            background-color: var(--bg-app);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                        0 0 40px rgba(124, 77, 255, 0.08);
+            border: 1px solid var(--border-standard);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: var(--transition);
+        }
+
+        [data-theme="light"] .phone-frame {
+            border: 1px solid var(--border-standard);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.05),
+                        0 0 20px rgba(0, 0, 0, 0.02);
+        }
+
+        /* Screen Scrollable Area */
+        .screen-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px 20px 100px 20px; /* Space at bottom for action button */
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Hide scrollbars but keep functionality */
+        .screen-content::-webkit-scrollbar {
+            width: 0px;
+            background: transparent;
+        }
+
+        /* Top Action Bar */
+        .top-action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .unlimited-badge {
+            background: linear-gradient(135deg, #00b0ff, #00e5ff);
+            border-radius: 12px;
+            padding: 8px 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #07050f;
+            box-shadow: 0 4px 15px rgba(0, 229, 255, 0.35);
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+        }
+
+        .unlimited-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.5);
+        }
+
+        .unlimited-badge svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 42px;
+            height: 42px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-standard);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            outline: none;
+            position: relative;
+        }
+
+        .icon-btn:hover {
+            background-color: var(--bg-card-hover);
+            border-color: var(--color-cyan);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--border-glow);
+        }
+
+        .icon-btn svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        /* Active highlight for translation toggle */
+        .icon-btn.active {
+            border-color: var(--color-cyan);
+            box-shadow: 0 0 10px var(--border-glow);
+        }
+
+        .icon-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 4px;
+            height: 4px;
+            background-color: var(--color-cyan);
+            border-radius: 50%;
+        }
+
+        /* Title Area */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 8px;
+        }
+
+        .brand-title {
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .brand-title span:last-child {
+            color: var(--color-cyan);
+            text-shadow: 0 0 15px var(--color-cyan-glow);
+        }
+
+        .brand-subtitle {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-weight: 400;
+            line-height: 1.6;
+        }
+
+        /* File Upload Cards */
+        .upload-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-standard);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+
+        .upload-card:hover {
+            background-color: var(--bg-card-hover);
+            border-color: rgba(124, 77, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .card-icon-container {
+            width: 52px;
+            height: 52px;
+            border-radius: 16px;
+            background: rgba(124, 77, 255, 0.1);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--color-purple);
+            flex-shrink: 0;
+            transition: var(--transition);
+        }
+
+        .upload-card:hover .card-icon-container {
+            background: rgba(124, 77, 255, 0.2);
+            box-shadow: 0 0 15px var(--color-purple-glow);
+        }
+
+        .card-icon-container svg {
+            width: 22px;
+            height: 22px;
+            fill: currentColor;
+        }
+
+        .card-info {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 0; /* Ensures text truncation works */
+        }
+
+        .card-title {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .card-status {
+            font-size: 11px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-status.selected {
+            color: var(--color-cyan);
+            font-weight: 500;
+        }
+
+        .card-arrow {
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .upload-card:hover .card-arrow {
+            color: var(--text-primary);
+            transform: translateX(3px);
+        }
+
+        .card-arrow svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+        }
+
+        /* Selected file badge and close action */
+        .file-remove-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: rgba(255, 68, 68, 0.1);
+            color: #ff4444;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid rgba(255, 68, 68, 0.2);
+            cursor: pointer;
+            transition: var(--transition);
+            z-index: 5;
+        }
+
+        .file-remove-btn:hover {
+            background: rgba(255, 68, 68, 0.3);
+            transform: scale(1.1);
+        }
+
+        .file-remove-btn svg {
+            width: 10px;
+            height: 10px;
+            fill: currentColor;
+        }
+
+        /* Hidden Input Elements */
+        .hidden-file-input {
+            display: none;
+        }
+
+        /* Volume Mixer Card */
+        .mixer-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-standard);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            transition: var(--transition);
+        }
+
+        .mixer-card:hover {
+            border-color: rgba(0, 229, 255, 0.15);
+        }
+
+        .mixer-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14.5px;
+            font-weight: 600;
+        }
+
+        .mixer-header svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--color-cyan);
+        }
+
+        .sliders-container {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-standard);
+        }
+
+        .slider-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .slider-value {
+            color: var(--color-cyan);
+            font-weight: 600;
+            font-size: 11px;
+        }
+
+        /* Custom Slider Range */
+        .range-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.08);
+            outline: none;
+            transition: var(--transition);
+        }
+
+        [data-theme="light"] .range-slider {
+            background: rgba(0, 0, 0, 0.08);
+        }
+
+        .range-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            transition: var(--transition);
+            border: 2px solid var(--color-purple);
+        }
+
+        .range-slider:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+            box-shadow: 0 0 12px var(--color-purple-glow);
+        }
+
+        /* Slider color specific styling via active status */
+        #slider-orig::-webkit-slider-thumb {
+            border-color: var(--color-cyan);
+        }
+        #slider-orig:active::-webkit-slider-thumb {
+            box-shadow: 0 0 12px var(--color-cyan-glow);
+        }
+
+        #slider-tts::-webkit-slider-thumb {
+            border-color: var(--color-purple);
+        }
+        #slider-tts:active::-webkit-slider-thumb {
+            box-shadow: 0 0 12px var(--color-purple-glow);
+        }
+
+        /* Vocal Remover Toggle Section */
+        .vocal-remover-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .vocal-info-container {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .vocal-icon {
+            color: var(--color-purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .vocal-icon svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
+
+        .vocal-labels {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .vocal-title {
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .vocal-subtitle {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        /* Custom Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 44px;
+            height: 24px;
+            flex-shrink: 0;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .3s;
+            border-radius: 34px;
+            border: 1px solid var(--border-standard);
+        }
+
+        [data-theme="light"] .slider-toggle {
+            background-color: rgba(0, 0, 0, 0.08);
+        }
+
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .3s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input:checked + .slider-toggle {
+            background-color: var(--color-cyan);
+            border-color: var(--color-cyan);
+        }
+
+        input:checked + .slider-toggle:before {
+            transform: translateX(20px);
+        }
+
+        /* Voice Selection Card */
+        .voice-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-standard);
+            border-radius: 24px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transition: var(--transition);
+        }
+
+        .voice-card:hover {
+            border-color: rgba(124, 77, 255, 0.15);
+        }
+
+        .voice-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14.5px;
+            font-weight: 600;
+        }
+
+        .voice-header svg {
+            width: 18px;
+            height: 18px;
+            fill: var(--color-cyan);
+        }
+
+        .voice-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .voice-option {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-standard);
+            border-radius: 14px;
+            padding: 12px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            transition: var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        [data-theme="light"] .voice-option {
+            background: rgba(0, 0, 0, 0.02);
+        }
+
+        .voice-option:hover {
+            border-color: var(--color-purple);
+            background: rgba(124, 77, 255, 0.05);
+        }
+
+        .voice-option.selected {
+            border-color: var(--color-cyan);
+            background: rgba(0, 229, 255, 0.06);
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.1);
+        }
+
+        .voice-name {
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .voice-meta {
+            font-size: 9.5px;
+            color: var(--text-secondary);
+        }
+
+        .voice-check {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--color-cyan);
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .voice-option.selected .voice-check {
+            display: flex;
+        }
+
+        .voice-check svg {
+            width: 8px;
+            height: 8px;
+            fill: #07050f;
+        }
+
+        /* Fixed Action Button Container (Sticky at bottom of frame) */
+        .bottom-action-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 16px 20px 24px 20px;
+            background: linear-gradient(to top, var(--bg-app) 75%, transparent);
+            z-index: 10;
+        }
+
+        .action-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--color-purple), var(--color-blue));
+            border: none;
+            border-radius: 18px;
+            padding: 16px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            box-shadow: 0 6px 20px rgba(124, 77, 255, 0.3);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(124, 77, 255, 0.45);
+        }
+
+        .action-btn:active {
+            transform: translateY(0);
+        }
+
+        .action-btn svg {
+            width: 16px;
+            height: 16px;
+            fill: currentColor;
+            transition: var(--transition);
+        }
+
+        .action-btn:hover svg {
+            transform: scale(1.15) rotate(10deg);
+        }
+
+        /* Modal styling for settings and info */
+        .modal {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(7, 5, 15, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+        }
+
+        .modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            background-color: var(--bg-app);
+            border: 1px solid var(--border-standard);
+            border-radius: 28px;
+            width: 100%;
+            max-width: 480px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            transform: scale(0.9);
+            transition: var(--transition);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+        }
+
+        .modal.open .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .close-modal-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .close-modal-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        .modal-body {
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .modal-option-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-standard);
+        }
+
+        .modal-option-row:last-child {
+            border-bottom: none;
+        }
+
+        /* Custom Selector in modal */
+        .custom-select {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-standard);
+            border-radius: 10px;
+            padding: 6px 12px;
+            color: var(--text-primary);
+            font-size: 11.5px;
+            outline: none;
+        }
+
+        [data-theme="light"] .custom-select {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Translation Progress Overlay */
+        .progress-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(7, 5, 15, 0.95);
+            z-index: 90;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .progress-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .spinner-outer {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-top-color: var(--color-cyan);
+            border-bottom-color: var(--color-purple);
+            animation: spin 1.5s linear infinite;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 24px;
+            position: relative;
+        }
+
+        .spinner-inner {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            border-left-color: var(--color-blue);
+            animation: spin-reverse 1.2s linear infinite;
+        }
+
+        .spinner-center {
+            position: absolute;
+            color: var(--color-cyan);
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .progress-text {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            min-height: 24px;
+        }
+
+        .progress-detail {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-bottom: 24px;
+            min-height: 16px;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        .progress-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, var(--color-cyan), var(--color-purple));
+            transition: width 0.4s ease-out;
+            box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+        }
+
+        .cancel-btn {
+            background: transparent;
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 8px 18px;
+            border-radius: 10px;
+            color: var(--text-secondary);
+            font-size: 11.5px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .cancel-btn:hover {
+            color: white;
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        /* Success dialog after translation */
+        .success-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 10px;
+        }
+
+        .success-btn {
+            background: var(--color-cyan);
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            color: #07050f;
+            font-weight: 600;
+            font-size: 13px;
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .success-btn:hover {
+            background-color: white;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.4);
+        }
+
+        .success-btn svg {
+            width: 14px;
+            height: 14px;
+            fill: currentColor;
+        }
+
+        /* Responsive Layout Grid */
+        .app-layout-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        .app-layout-left, .app-layout-right {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            .app-layout-grid {
+                display: grid;
+                grid-template-columns: 1.15fr 0.85fr;
+                gap: 24px;
+                align-items: start;
+            }
+        }
+
+        /* Keyframes */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes spin-reverse {
+            0% { transform: rotate(360deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* ===== VIDEO BLUR EDITOR ===== */
+        #blur-editor-modal {
+            z-index: 200;
+        }
+        #blur-editor-modal .modal-content {
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            padding: 20px;
+            gap: 12px;
+        }
+        .blur-editor-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-standard);
+            cursor: crosshair;
+            user-select: none;
+        }
+        .blur-editor-canvas-wrapper video {
+            display: block;
+            width: 100%;
+            max-height: 340px;
+            object-fit: contain;
+        }
+        #blur-canvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            cursor: crosshair;
+        }
+        .blur-toolbar {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            padding: 10px 0 4px;
+            border-bottom: 1px solid var(--border-standard);
+        }
+        .blur-tool-btn {
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            border: 1px solid var(--border-standard);
+            background: rgba(255,255,255,0.05);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .blur-tool-btn:hover {
+            background: rgba(124,77,255,0.2);
+            border-color: var(--color-purple);
+        }
+        .blur-tool-btn.active {
+            background: linear-gradient(135deg, var(--color-purple), var(--color-cyan));
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 0 12px var(--color-purple-glow);
+        }
+        .blur-tool-btn.danger:hover {
+            background: rgba(255,68,68,0.25);
+            border-color: #ff4444;
+        }
+        .blur-zones-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 120px;
+            overflow-y: auto;
+            padding: 2px 0;
+        }
+        .blur-zone-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(124,77,255,0.08);
+            border: 1px solid rgba(124,77,255,0.2);
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+        .blur-zone-item .zone-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .blur-zone-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 3px;
+        }
+        .blur-zone-del {
+            background: transparent;
+            border: none;
+            color: #ff4444;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 1;
+            padding: 0 2px;
+            transition: var(--transition);
+        }
+        .blur-zone-del:hover { transform: scale(1.3); }
+        .blur-strength-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 11.5px;
+        }
+        .blur-strength-row label { color: var(--text-secondary); white-space: nowrap; }
+        .blur-strength-row input[type=range] { flex: 1; }
+        .blur-strength-row span { color: var(--color-cyan); font-weight: 600; min-width: 28px; }
+        .blur-hint {
+            font-size: 10.5px;
+            color: var(--text-muted);
+            text-align: center;
+            padding: 4px 0;
+            line-height: 1.5;
+        }
+        /* Blur trigger button on video card */
+        .blur-edit-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            padding: 4px 10px;
+            border-radius: 8px;
+            border: 1px solid rgba(0,229,255,0.35);
+            background: rgba(0,229,255,0.1);
+            color: var(--color-cyan);
+            font-size: 10.5px;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            gap: 4px;
+            z-index: 6;
+            transition: var(--transition);
+        }
+        .blur-edit-btn:hover {
+            background: rgba(0,229,255,0.2);
+            box-shadow: 0 0 10px rgba(0,229,255,0.3);
+        }
+        .blur-edit-btn svg { width: 11px; height: 11px; fill: currentColor; }
+
+        /* Mobile & WebView Adaptation */
+        @media (max-width: 600px), (max-height: 480px) {
+            body {
+                padding: 0 !important;
+                background-color: var(--bg-app) !important;
+            }
+            .phone-frame {
+                max-width: 100% !important;
+                height: 100vh !important;
+                max-height: 100vh !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+            }
+            .screen-content {
+                padding: 16px 14px 90px 14px !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Smartphone Mockup Wrapper -->
+    <div class="phone-frame">
+        
+        <!-- Screen Content Area (Scrollable) -->
+        <div class="screen-content">
+            
+            <!-- Top Action Bar -->
+            <div class="top-action-bar">
+                <button class="unlimited-badge" onclick="customAlert('គណនីរបស់អ្នកគឺ៖ គ្មានដែនកំណត់ (Unlimited Account)')">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+                    </svg>
+                    <span>គ្មានដែនកំណត់</span>
+                </button>
+                <div class="quick-actions">
+                    <!-- Translate Toggle Mode -->
+                    <button class="icon-btn active" id="btn-lang" title="ភាសាបកប្រែ" onclick="toggleTranslationMode()">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12.87 15.07l-2.54-2.51.03-.03c1.74-1.94 2.98-4.17 3.71-6.53H17V4h-7V2H8v2H1v1.99h11.17C11.5 7.92 10.44 9.75 9 11.35 8.07 10.32 7.3 9.19 6.69 8h-2c.73 1.63 1.73 3.17 2.98 4.56l-5.09 5.02L4 19l5-5 3.11 3.11.76-2.04zM18.5 10h-2L12 22h2l1.12-3h4.75L21 22h2l-4.5-12zm-2.62 7l1.62-4.33L19.12 17h-3.24z"/>
+                        </svg>
+                    </button>
+                    <!-- Theme Toggle -->
+                    <button class="icon-btn" id="btn-theme" title="ប្តូរពណ៌ផ្ទៃ" onclick="toggleTheme()">
+                        <svg viewBox="0 0 24 24" id="theme-icon">
+                            <path d="M20 15.31L23.31 12 20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>
+                        </svg>
+                    </button>
+                    <!-- Settings -->
+                    <button class="icon-btn" title="ការកំណត់" onclick="openModal('settings-modal')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                        </svg>
+                    </button>
+                    <!-- Info / Help -->
+                    <button class="icon-btn" title="អំពីកម្មវិធី" onclick="openModal('info-modal')">
+                        <svg viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Title Area -->
+            <div class="brand-header">
+                <h1 class="brand-title">AI DUBBING <span>PRO</span></h1>
+                <p class="brand-subtitle" id="brand-sub">បកប្រែវីដេអូស្វ័យប្រវត្តិតាមរយៈ Edge TTS (ពិសិដ្ឋ & ស្រីមុំ)</p>
+                <!-- TTS Engine Status Badge -->
+                <div id="tts-engine-badge" style="
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    margin-top: 8px;
+                    padding: 5px 12px;
+                    border-radius: 20px;
+                    font-size: 10.5px;
+                    font-weight: 600;
+                    background: rgba(255,255,255,0.05);
+                    border: 1px solid rgba(255,255,255,0.1);
+                    color: var(--text-muted);
+                    cursor: pointer;
+                    transition: var(--transition);
+                " onclick="runVoiceTest()" title="ចុចដើម្បីសាកល្បងសំឡេង TTS">
+                    <span id="tts-engine-dot" style="width:7px;height:7px;border-radius:50%;background:#625f75;display:inline-block;"></span>
+                    <span id="tts-engine-label">កំពុងប្រកប TTS engine...</span>
+                </div>
+            </div>
+
+            <div class="app-layout-grid">
+                <!-- Left Column: Inputs & Speaker Profiles -->
+                <div class="app-layout-left">
+                    <!-- Input Video Card -->
+                    <!-- Hidden file inputs OUTSIDE cards - required for Android WebView compatibility -->
+                    <input type="file" id="input-video" style="display:none; visibility:hidden; position:fixed; left:-9999px; top:-9999px;" accept="video/*,video/mp4,video/x-matroska,video/webm,video/avi,video/quicktime" onchange="handleFileChange(this, 'video')" multiple>
+                    <div class="upload-card" id="card-video" onclick="triggerVideoUpload(event)" style="cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:rgba(124,77,255,0.2); user-select:none;">
+                        <div class="card-icon-container">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4zM14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2z"/>
+                            </svg>
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">វីដេអូដើម (Original Video)</div>
+                            <div class="card-status" id="status-video">ចុចដើម្បីជ្រើសរើសវីដេអូ...</div>
+                        </div>
+                        <div class="card-arrow" id="arrow-video">
+                            <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+                        </div>
+                        <button class="file-remove-btn" id="remove-video" onclick="clearFile(event, 'video')">
+                            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        </button>
+                        <!-- Blur Editor Trigger Button -->
+                        <button class="blur-edit-btn" id="btn-open-blur" onclick="openBlurEditor(event)" title="ដាក់ Blur លើវីដេអូ">
+                            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                            🎨 Blur
+                        </button>
+                    </div>
+                    <!-- Video URL Input Field (Collapsible) -->
+                    <div id="video-url-wrapper" style="margin-top: -12px; margin-bottom: 8px; display: none;">
+                        <input type="text" id="video-url-input" class="custom-select" style="width: 100%; text-align: left; padding: 10px 14px;" placeholder="បញ្ចូលតំណភ្ជាប់វីដេអូ (Direct Video MP4 URL)..." oninput="handleVideoUrlChange(this.value)">
+                    </div>
+                    <div style="text-align: right; margin-top: -14px; margin-bottom: 12px; padding-right: 6px;">
+                        <a href="#" id="toggle-video-mode" style="font-size: 11px; color: var(--color-cyan); text-decoration: none;" onclick="toggleVideoMode(event)">➔ ប្រើតំណភ្ជាប់វីដេអូ (Use Video URL)</a>
+                    </div>
+
+                    <!-- Input Subtitle Card -->
+                    <!-- Hidden SRT input OUTSIDE card - required for Android WebView compatibility -->
+                    <input type="file" id="input-srt" style="display:none; visibility:hidden; position:fixed; left:-9999px; top:-9999px;" accept=".srt,.txt,text/plain,text/x-srt,application/x-subrip,*/*" onchange="handleFileChange(this, 'srt')" multiple>
+                    <div class="upload-card" id="card-srt" onclick="triggerSrtUpload(event)" style="cursor:pointer; touch-action:manipulation; -webkit-tap-highlight-color:rgba(124,77,255,0.2); user-select:none;">
+                        <div class="card-icon-container">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-4 6H9c-.55 0-1-.45-1-1s.45-1 1-1h6c.55 0 1 .45 1 1s-.45 1-1 1zm2 4H7c-.55 0-1-.45-1-1s.45-1 1-1h10c.55 0 1 .45 1 1s-.45 1-1 1zm-3 4H7c-.55 0-1-.45-1-1s.45-1 1-1h7c.55 0 1 .45 1 1s-.45 1-1 1z"/>
+                            </svg>
+                        </div>
+                        <div class="card-info">
+                            <div class="card-title">ឯកសារអក្សររត់ (SRT Subtitles)</div>
+                            <div class="card-status" id="status-srt">ចុចដើម្បីជ្រើសរើសឯកសារ SRT...</div>
+                        </div>
+                        <div class="card-arrow" id="arrow-srt">
+                            <svg viewBox="0 0 24 24"><path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"/></svg>
+                        </div>
+                        <button class="file-remove-btn" id="remove-srt" onclick="clearFile(event, 'srt')">
+                            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                        </button>
+                    </div>
+                    <!-- SRT Text Area Field (Collapsible) -->
+                    <div id="srt-text-wrapper" style="margin-top: -12px; margin-bottom: 8px; display: none;">
+                        <textarea id="srt-text-input" class="custom-select" style="width: 100%; height: 120px; text-align: left; padding: 10px 14px; font-family: monospace; resize: none; line-height: 1.4; font-size: 11px;" placeholder="ចម្លង និងបិទភ្ជាប់ខ្លឹមសារឯកសារ SRT ទីនេះ..." oninput="handleSrtTextChange(this.value)"></textarea>
+                        <div style="display: flex; gap: 8px; margin-top: 6px; justify-content: flex-end;">
+                            <button type="button" onclick="downloadSrtFile()" style="padding: 5px 12px; border-radius: 8px; border: 1px solid var(--color-cyan); background: rgba(0,229,255,0.15); color: var(--color-cyan); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                📥 ទាញយក SRT (.srt)
+                            </button>
+                            <button type="button" onclick="copySrtContent()" style="padding: 5px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: var(--text-primary); font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                📋 Copy អត្ថបទ
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Transcribe Language Selector -->
+                    <div id="transcribe-lang-wrapper" style="margin-top: 6px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <span style="font-size: 11.5px; color: var(--text-secondary);">🌐 ភាសានិយាយក្នុងវីដេអូ (Video Language):</span>
+                        <select id="transcribe-lang-select" class="custom-select" style="width: auto; padding: 6px 12px; font-size: 11px;">
+                            <option value="auto" selected>ស្វែងរកភាសាស្វ័យប្រវត្ត (Auto Detect)</option>
+                            <option value="km-KH">Khmer (ភាសាខ្មែរ)</option>
+                            <option value="en-US">English (English)</option>
+                            <option value="zh-CN">Chinese (中文)</option>
+                            <option value="th-TH">Thai (ไทย)</option>
+                            <option value="vi-VN">Vietnamese (Tiếng Việt)</option>
+                            <option value="ja-JP">Japanese (日本語)</option>
+                            <option value="ko-KR">Korean (한국어)</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: -10px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+                        <label style="font-size: 11px; color: #ffeb3b; font-weight: 600; white-space: nowrap;">🤖 Gemini API Key:</label>
+                        <input type="password" id="gemini-api-key" placeholder="AIza... (ពី aistudio.google.com ឥតគិតថ្លៃ)" style="flex:1; font-size: 11px; padding: 5px 10px; border-radius: 6px; border: 1px solid #3d1fa3; background: #0e0b28; color: #e0deff; outline: none; height: 26px;">
+                        <button onclick="saveGeminiKey()" style="height: 28px; padding: 0 10px; border-radius: 6px; border: 1px solid #ffeb3b; background: rgba(255,235,59,10); color: #ffeb3b; font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;">💾 រក្សា</button>
+                    </div>
+                    <div style="text-align: right; margin-top: -14px; margin-bottom: 12px; padding-right: 6px; display: flex; justify-content: space-between; align-items: center; gap: 6px; flex-wrap: wrap;">
+                        <a href="#" id="btn-transcribe-web" style="font-size: 11px; color: var(--color-cyan); text-decoration: none; font-weight: 500;" onclick="autoTranscribeVideo(event)">🎙️ បង្កើត SRT ស្វ័យប្រវត្ត</a>
+                        <a href="#" id="btn-translate-web" style="font-size: 11px; color: #ffeb3b; text-decoration: none; font-weight: 600;" onclick="translateSrtToKhmer(event)">🌐 បកប្រែជាខ្មែរ</a>
+                        <a href="#" id="toggle-srt-mode" style="font-size: 11px; color: var(--color-cyan); text-decoration: none;" onclick="toggleSrtMode(event)">➔ បិទភ្ជាប់អត្ថបទ SRT</a>
+                    </div>
+
+                    <!-- Speaker Profile Card -->
+                    <div class="voice-card">
+                        <div class="voice-header">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/>
+                            </svg>
+                            <span>សំឡេងលំនាំដើម (Default Speaker)</span>
+                        </div>
+                        <div class="voice-grid">
+                            <div class="voice-option selected" onclick="selectVoice(this, 'Piseth')">
+                                <span class="voice-name">ពិសិដ្ឋ (Piseth)</span>
+                                <span class="voice-meta">Edge TTS - ប្រុស</span>
+                                <div class="voice-check">
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                            </div>
+                            <div class="voice-option" onclick="selectVoice(this, 'Sreymom')">
+                                <span class="voice-name">ស្រីមុំ (Sreymom)</span>
+                                <span class="voice-meta">Edge TTS - ស្រី</span>
+                                <div class="voice-check">
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                            </div>
+                            <div class="voice-option" onclick="selectVoice(this, 'Sokha')">
+                                <span class="voice-name">សុខា (Sokha)</span>
+                                <span class="voice-meta">Khmer AI - ស្រី</span>
+                                <div class="voice-check">
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                            </div>
+                            <div class="voice-option" onclick="selectVoice(this, 'Chitra')">
+                                <span class="voice-name">ចិត្រា (Chitra)</span>
+                                <span class="voice-meta">Khmer AI - ប្រុស</span>
+                                <div class="voice-check">
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Auto-Detect Voices switch -->
+                        <div style="margin-top: 12px; padding: 10px 12px; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px dashed rgba(255, 255, 255, 0.1); display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; flex-direction: column; gap: 2px;">
+                                <span style="font-size: 11px; font-weight: 600; color: #fff;">ស្វែងរកភេទសំឡេងស្វ័យប្រវត្តិ (Female / Male)</span>
+                                <span style="font-size: 9px; color: var(--color-gray-dark);">(Female) ➔ សំឡេង Sreymom, (Male) ➔ សំឡេង Piseth</span>
+                            </div>
+                            <label class="switch" style="margin-right: 0;">
+                                <input type="checkbox" id="toggle-auto-voice" checked>
+                                <span class="slider-toggle"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Parameters & Mixer -->
+                <div class="app-layout-right">
+                    <!-- Volume Mixer Card -->
+                    <div class="mixer-card">
+                        <div class="mixer-header">
+                            <svg viewBox="0 0 24 24">
+                                <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                            </svg>
+                            <span>កម្រិតសំឡេង (Volume Mixer)</span>
+                        </div>
+                        <div class="sliders-container">
+                            <div class="slider-group">
+                                <div class="slider-labels">
+                                    <span>សំឡេងដើម (Original)</span>
+                                    <span class="slider-value" id="val-orig">15%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="15" class="range-slider" id="slider-orig" oninput="updateSliderValue(this, 'val-orig')">
+                            </div>
+                            <div class="slider-group">
+                                <div class="slider-labels">
+                                    <span>សំឡេងបកប្រែ (TTS)</span>
+                                    <span class="slider-value" id="val-tts">100%</span>
+                                </div>
+                                <input type="range" min="0" max="100" value="100" class="range-slider" id="slider-tts" oninput="updateSliderValue(this, 'val-tts')">
+                            </div>
+                        </div>
+                        <div class="vocal-remover-row">
+                            <div class="vocal-info-container">
+                                <div class="vocal-icon">
+                                    <svg viewBox="0 0 24 24">
+                                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 16h-2v-2h2v2zm1.07-7.75l-.9.92C12.45 11.9 12 12.5 12 14h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H5c0-3.87 3.13-7 7-7s7 3.13 7 7c0 1.9-.76 3.63-2 4.77l-.93-.52zM19 13h-2v-2h2v2z"/>
+                                    </svg>
+                                </div>
+                                <div class="vocal-labels">
+                                    <span class="vocal-title">លុបសំឡេងច្រៀង/និយាយដើម</span>
+                                    <span class="vocal-subtitle">Auto Remove Vocal (Stereo Only)</span>
+                                </div>
+                            </div>
+                            <label class="switch">
+                                <input type="checkbox" id="toggle-vocal" checked>
+                                <span class="slider-toggle"></span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sticky Bottom Action Button -->
+        <div class="bottom-action-container">
+            <button class="action-btn" onclick="startTranslation()">
+                <svg viewBox="0 0 24 24">
+                    <path d="M11.5 2C6.81 2 3 5.81 3 10.5S6.81 19 11.5 19h.5v3c0 .82.9 1.3 1.5.8l6.3-5.2c.4-.3.7-.8.7-1.3V10.5C20 5.81 16.19 2 11.5 2zm1.5 12h-3v-3H8v-2h2V7h2v2h3v2h-3v3z"/>
+                </svg>
+                <span>ចាប់ផ្តើមបកប្រែ (Generate Dubbed Video)</span>
+            </button>
+        </div>
+
+        <!-- Settings Modal -->
+        <div class="modal" id="settings-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">ការកំណត់កម្មវិធី</h3>
+                    <button class="close-modal-btn" onclick="closeModal('settings-modal')">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-option-row" style="flex-direction: column; align-items: flex-start; gap: 8px;">
+                        <span>អាសយដ្ឋាន Server (Backend Server URL)</span>
+                        <input type="text" id="backend-url-input" class="custom-select" style="width: 100%; text-align: left; padding: 10px 14px;" placeholder="ឧទាហរណ៍៖ https://my-server.railway.app" onchange="updateBackendUrl(this.value)">
+                    </div>
+                    <div class="modal-option-row">
+                        <span>ម៉ាស៊ីនបកប្រែ (Translation Engine)</span>
+                        <select class="custom-select" id="engine-select" onchange="updateEngine(this.value)">
+                            <option value="google">Google Translate API</option>
+                            <option value="gpt" selected>GPT-4o Deep Translation</option>
+                            <option value="claude">Claude 3.5 Sonnet</option>
+                        </select>
+                    </div>
+                    <div class="modal-option-row">
+                        <span>កម្រិតគុណភាពវីដេអូ (Output Quality)</span>
+                        <select class="custom-select">
+                            <option value="1080p" selected>1080p FHD (Recommended)</option>
+                            <option value="720p">720p HD</option>
+                            <option value="4k">4K Ultra HD</option>
+                        </select>
+                    </div>
+                    <div class="modal-option-row">
+                        <span>ល្បឿនអានបកប្រែ (TTS Speed)</span>
+                        <select class="custom-select">
+                            <option value="0.9">យឺត (0.9x)</option>
+                            <option value="1.0" selected>ធម្មតា (1.0x)</option>
+                            <option value="1.15">លឿនល្មម (1.15x)</option>
+                            <option value="1.25">លឿន (1.25x)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Modal -->
+        <div class="modal" id="info-modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title">អំពីកម្មវិធី</h3>
+                    <button class="close-modal-btn" onclick="closeModal('info-modal')">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p style="font-weight: 600; color: var(--color-cyan);">AI Dubbing Pro v2.1.0</p>
+                    <p>កម្មវិធីនេះជួយសម្រួលដល់ការបកប្រែវីដេអូបរទេស មកជាភាសាខ្មែរដោយស្វ័យប្រវត្តិតាមរយៈការបញ្ចូលឯកសារអក្សររត់ (SRT Subtitles) រួចបំប្លែងទៅជាសំឡេងនិយាយភាសាខ្មែរដ៏ពីរោះរណ្តំដោយប្រើបច្ចេកវិទ្យា Microsoft Edge TTS ។</p>
+                    <div style="border-top: 1px solid var(--border-standard); margin-top: 12px; padding-top: 12px; font-size: 11px; line-height: 1.5; color: var(--text-secondary); text-align: left;">
+                        <p style="font-weight: 600; color: var(--color-purple); margin-bottom: 6px;">💡 ការណែនាំសម្រាប់ APK (Android Build Tips)៖</p>
+                        <ul style="padding-left: 16px; display: flex; flex-direction: column; gap: 4px;">
+                            <li>អ្នកអាចវេចខ្ចប់កម្មវិធីនេះជា APK តាមរយៈ <b>Capacitor</b>, <b>Cordova</b> ឬ <b>Android WebView</b>។</li>
+                            <li>បើកការកំណត់ (Settings) រួចបញ្ចូល <b>Backend Server URL</b> (អាសយដ្ឋាន Server ដែលអ្នកបានដំណើរការ server.py ដូចជា hosted លើ Railway ឬ Render) ដើម្បីអាចឱ្យកម្មវិធីដំណើរការ Dub វីដេអូបាន។</li>
+                            <li>ធានាថា Android WebView របស់អ្នកបានបើកសិទ្ធិ Upload/Download ឯកសារ និងគាំទ្រ file chooser។</li>
+                        </ul>
+                    </div>
+                    <p style="border-top: 1px solid var(--border-standard); padding-top: 10px; font-size: 11px; color: var(--text-muted); margin-top: 12px;">អភិវឌ្ឍន៍ដោយក្តីស្រឡាញ់ សម្រាប់សហគមន៍អ្នកកាត់តវីដេអូខ្មែរ។</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Overlay (Fires on Click Generate) -->
+        <div class="progress-overlay" id="progress-screen">
+            <div class="spinner-outer">
+                <div class="spinner-inner"></div>
+                <div class="spinner-center" id="progress-percentage">0%</div>
+            </div>
+            <div class="progress-text" id="progress-title">កំពុងរៀបចំការបកប្រែ...</div>
+            <div class="progress-detail" id="progress-sub">រង់ចាំមួយភ្លែត</div>
+            
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progress-bar"></div>
+            </div>
+
+            <button class="cancel-btn" id="btn-cancel-trans" onclick="cancelTranslation()">បោះបង់ (Cancel)</button>
+            
+            <!-- Success Block (Hidden by default, shown at 100%) -->
+            <div class="success-actions" id="success-box" style="display: none; flex-direction: column; width: 100%; max-width: 500px;">
+                <div style="width: 100%; border: 1px solid var(--border-standard); padding: 12px; border-radius: 18px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.25);">
+                    <div style="font-size: 11.5px; font-weight: 600; color: var(--color-cyan); margin-bottom: 8px; text-align: center;">ទិន្នន័យចាក់សាកល្បង (Real-time Dubbed Preview)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+                        <span style="font-size: 11px; color: var(--text-secondary);">ជ្រើសរើសសំឡេង៖</span>
+                        <select id="preview-voice-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; border-radius: 8px; height: auto;" onchange="changePreviewVoice(this.value)">
+                            <option value="Piseth">ពិសិដ្ឋ (Piseth - Edge M)</option>
+                            <option value="Sreymom">ស្រីមុំ (Sreymom - Edge F)</option>
+                            <option value="Sokha">សុខា (Sokha - AI F)</option>
+                            <option value="Chitra">ចិត្រា (Chitra - AI M)</option>
+                        </select>
+                    </div>
+                    <video id="preview-player" controls style="width: 100%; border-radius: 12px; display: block; outline: none; background: #000; max-height: 180px;"></video>
+                    <div id="preview-subtitles" style="font-size: 12.5px; color: #ffffff; margin-top: 10px; text-align: center; min-height: 38px; padding: 4px; line-height: 1.5; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"></div>
+                </div>
+                <button class="success-btn" onclick="saveDubbedVideo()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/>
+                    </svg>
+                    <span>ទាញយកវីដេអូដែលបកប្រែរួច</span>
+                </button>
+                <button class="cancel-btn" onclick="resetTranslation()" style="margin-top: 5px;">បកប្រែសារជាថ្មី</button>
+            </div>
+        </div>
+
+        <!-- Custom Alert Modal -->
+        <div class="modal" id="alert-modal">
+            <div class="modal-content" style="max-width: 320px; text-align: center; gap: 20px;">
+                <div class="modal-header" style="justify-content: center; border-bottom: none;">
+                    <h3 class="modal-title" id="alert-modal-title">ជូនដំណឹង</h3>
+                </div>
+                <div class="modal-body" id="alert-modal-body" style="font-size: 13px; text-align: center; color: var(--text-primary); line-height: 1.6;">
+                    សូមជ្រើសរើសវីដេអូដើម និងឯកសារអក្សររត់ជាមុនសិន!
+                </div>
+                <div style="display: flex; gap: 10px; width: 100%;">
+                    <button class="success-btn" id="alert-btn-ok" style="flex: 1; padding: 10px; border-radius: 12px; font-size: 12.5px;" onclick="closeModal('alert-modal')">យល់ព្រម</button>
+                    <button class="success-btn" id="alert-btn-demo" style="flex: 1; padding: 10px; border-radius: 12px; font-size: 12.5px; display: none; background: linear-gradient(135deg, var(--color-purple), var(--color-blue)); color: white;" onclick="runDemoMode()">សាកល្បង Demo</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== VIDEO BLUR EDITOR MODAL ===== -->
+        <div class="modal" id="blur-editor-modal">
+            <div class="modal-content" style="max-width: 680px; max-height: 88vh; overflow-y: auto; padding: 20px; gap: 14px;">
+                <!-- Header -->
+                <div class="modal-header">
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--color-purple),var(--color-cyan));display:flex;align-items:center;justify-content:center;">
+                            <svg viewBox="0 0 24 24" style="width:18px;height:18px;fill:#fff;"><path d="M6 13c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0-8c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm-3 .5c-.28 0-.5.22-.5.5s.22.5.5.5.5-.22.5-.5-.22-.5-.5-.5zm3-4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm12 0c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm-6 12c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm6 0c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-4c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm0-8c.55 0 1-.45 1-1s-.45-1-1-1-1 .45-1 1 .45 1 1 1zm3 8.5c.28 0 .5-.22.5-.5s-.22-.5-.5-.5-.5.22-.5.5.22.5.5.5zM12 5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1zm0 4c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z"/></svg>
+                        </div>
+                        <div>
+                            <div style="font-size:15px;font-weight:700;">Blur Zone Editor</div>
+                            <div style="font-size:10.5px;color:var(--text-muted);">គូរ Rectangle ដើម្បីបាំងផ្នែកដែលចង់លាក់</div>
+                        </div>
+                    </div>
+                    <button class="close-modal-btn" onclick="closeBlurEditor()">
+                        <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    </button>
+                </div>
+
+                <!-- Blur Strength -->
+                <div class="blur-strength-row">
+                    <label>💧 កម្រិត Blur:</label>
+                    <input type="range" min="5" max="50" value="20" id="blur-strength-slider" oninput="document.getElementById('blur-strength-val').innerText = this.value" class="range-slider">
+                    <span id="blur-strength-val">20</span>
+                </div>
+
+                <!-- Toolbar -->
+                <div class="blur-toolbar">
+                    <button class="blur-tool-btn active" id="blur-btn-draw" onclick="setBlurTool('draw')">
+                        <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                        ✏️ គូរ Blur Zone
+                    </button>
+                    <button class="blur-tool-btn" id="blur-btn-select" onclick="setBlurTool('select')">
+                        <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;"><path d="M3 5h2V3c-1.1 0-2 .9-2 2zm0 8h2v-2H3v2zm4 8h2v-2H7v2zM3 9h2V7H3v2zm10-6h-2v2h2V3zm6 0v2h2c0-1.1-.9-2-2-2zM5 21v-2H3c0 1.1.9 2 2 2zm-2-4h2v-2H3v2zM9 3H7v2h2V3zm2 18h2v-2h-2v2zm8-8h2v-2h-2v2zm0 8c1.1 0 2-.9 2-2h-2v2zm0-12h2V7h-2v2zm0 8h2v-2h-2v2zm-4 4h2v-2h-2v2zm0-16h2V3h-2v2z"/></svg>
+                        🔲 ជ្រើសរើស
+                    </button>
+                    <button class="blur-tool-btn danger" onclick="deleteSelectedZone()" id="blur-btn-delete">
+                        <svg viewBox="0 0 24 24" style="width:13px;height:13px;fill:currentColor;"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        លុបដែនបាំងដែលជ្រើស
+                    </button>
+                    <button class="blur-tool-btn danger" onclick="clearAllBlurZones()" style="margin-left:auto;">
+                        🗑️ លុបទំាងអស់
+                    </button>
+                </div>
+
+                <!-- Video + Canvas Wrapper -->
+                <div class="blur-editor-canvas-wrapper" id="blur-canvas-wrapper">
+                    <video id="blur-preview-video" playsinline muted loop style="display:block;width:100%;max-height:320px;object-fit:contain;"></video>
+                    <canvas id="blur-canvas"></canvas>
+                </div>
+
+                <!-- Video playback controls -->
+                <div style="display:flex;align-items:center;gap:10px;padding:4px 0;">
+                    <button class="blur-tool-btn" onclick="blurVideoPlayPause()" id="blur-play-btn" style="min-width:80px;">▶ Play</button>
+                    <input type="range" id="blur-seek-bar" min="0" max="100" value="0" style="flex:1;" class="range-slider" oninput="blurVideoSeek(this.value)">
+                    <span id="blur-time-label" style="font-size:10px;color:var(--text-muted);white-space:nowrap;">0:00</span>
+                </div>
+
+                <!-- Zones List -->
+                <div style="font-size:11px;font-weight:600;color:var(--text-secondary);">📋 Blur Zones (<span id="blur-zone-count">0</span>)</div>
+                <div class="blur-zones-list" id="blur-zones-list">
+                    <div style="font-size:11px;color:var(--text-muted);text-align:center;padding:10px 0;" id="blur-zones-empty">មិនទាន់មាន Blur Zone ណាមួយ — គូរ Rectangle ដើម្បីបន្ថែម</div>
+                </div>
+
+                <p class="blur-hint">💡 ចុចហើយអូស (Click &amp; Drag) លើវីដេអូ ដើម្បីគូរ Blur Zone • ក្នុងរបៀប Select ចុចលើ Zone ដែលមាន ដើម្បីជ្រើស ហើយអូសសម្រាប់ Move</p>
+
+                <!-- Action Buttons -->
+                <div style="display:flex;gap:10px;">
+                    <button class="success-btn" onclick="applyBlurZones()" style="flex:1;">
+                        <svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:currentColor;"><path d="M9 16.2L4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4L9 16.2z"/></svg>
+                        ✅ រក្សាទុក Blur Zones
+                    </button>
+                    <button class="cancel-btn" onclick="closeBlurEditor()" style="flex:0.5;">បោះបង់</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // State variables
+        let selectedVoice = 'Piseth';
+        let translationInterval = null;
+        let selectedVideoFile = null;
+        let selectedVideoFiles = []; // Array of File objects for multi-video batch mode
+        let selectedSrtFile = null;
+        let selectedSrtFiles = [];  // Array of File objects for multi-SRT split mode
+        let isKhmerOnlyMode = false;
+        let srtTextContent = "";
+        let parsedSubtitles = [];
+        let lastSpokenId = -1;
+        let currentTTSAudio = null;
+        let dubbedVideoBlob = null;
+        let dubbedVideoObjectUrl = null;
+        let currentFetchAbortController = null;
+        let isDubbedMode = false;
+
+        // URL and Text-paste mode state variables
+        let selectedVideoUrl = "";
+        let isVideoUrlMode = false;
+        let isSrtTextMode = false;
+
+        function toggleVideoMode(event) {
+            if (event) event.preventDefault();
+            isVideoUrlMode = !isVideoUrlMode;
+            const wrapper = document.getElementById('video-url-wrapper');
+            const toggleLink = document.getElementById('toggle-video-mode');
+            const cardVideo = document.getElementById('card-video');
+            const statusVideo = document.getElementById('status-video');
+
+            if (isVideoUrlMode) {
+                wrapper.style.display = 'block';
+                toggleLink.innerText = "➔ ជ្រើសរើសឯកសារវិញ (Switch to File Upload)";
+                cardVideo.style.pointerEvents = 'none';
+                cardVideo.style.opacity = '0.6';
+                statusVideo.innerText = selectedVideoUrl ? "ប្រើតំណភ្ជាប់វីដេអូ" : "សូមបញ្ចូលតំណភ្ជាប់វីដេអូខាងក្រោម";
+                if (selectedVideoUrl) statusVideo.classList.add('selected');
+                else statusVideo.classList.remove('selected');
+            } else {
+                wrapper.style.display = 'none';
+                toggleLink.innerText = "➔ ប្រើតំណភ្ជាប់វីដេអូ (Use Video URL)";
+                cardVideo.style.pointerEvents = 'auto';
+                cardVideo.style.opacity = '1.0';
+                if (selectedVideoFiles && selectedVideoFiles.length > 1) {
+                    statusVideo.innerText = `✅ បានជ្រើស ${selectedVideoFiles.length} វីដេអូ (Batch Mode)`;
+                } else if (selectedVideoFile) {
+                    statusVideo.innerText = `${selectedVideoFile.name} (${(selectedVideoFile.size / (1024*1024)).toFixed(1)} MB)`;
+                } else {
+                    statusVideo.innerText = "មិនទាន់ជ្រើសរើសវីដេអូនៅឡើយទេ";
+                }
+                if (selectedVideoFile || (selectedVideoFiles && selectedVideoFiles.length > 0)) statusVideo.classList.add('selected');
+                else statusVideo.classList.remove('selected');
+            }
+        }
+
+        function handleVideoUrlChange(val) {
+            selectedVideoUrl = val.trim();
+            const statusVideo = document.getElementById('status-video');
+            const blurBtn = document.getElementById('btn-open-blur');
+            if (selectedVideoUrl) {
+                statusVideo.innerText = "បានបញ្ចូលតំណភ្ជាប់វីដេអូ";
+                statusVideo.classList.add('selected');
+                if (blurBtn) blurBtn.style.display = 'flex';
+            } else {
+                statusVideo.innerText = "សូមបញ្ចូលតំណភ្ជាប់វីដេអូខាងក្រោម";
+                statusVideo.classList.remove('selected');
+                if (blurBtn) blurBtn.style.display = 'none';
+            }
+        }
+
+        function toggleSrtMode(event) {
+            if (event) event.preventDefault();
+            isSrtTextMode = !isSrtTextMode;
+            const wrapper = document.getElementById('srt-text-wrapper');
+            const toggleLink = document.getElementById('toggle-srt-mode');
+            const cardSrt = document.getElementById('card-srt');
+            const statusSrt = document.getElementById('status-srt');
+
+            if (isSrtTextMode) {
+                wrapper.style.display = 'block';
+                toggleLink.innerText = "➔ ជ្រើសរើសឯកសារវិញ (Switch to File Upload)";
+                cardSrt.style.pointerEvents = 'none';
+                cardSrt.style.opacity = '0.6';
+                statusSrt.innerText = srtTextContent ? "ប្រើប្រាស់អត្ថបទដែលបានបិទភ្ជាប់" : "សូមបិទភ្ជាប់អត្ថបទ SRT ខាងក្រោម";
+                if (srtTextContent.trim()) statusSrt.classList.add('selected');
+                else statusSrt.classList.remove('selected');
+            } else {
+                wrapper.style.display = 'none';
+                toggleLink.innerText = "➔ បិទភ្ជាប់អត្ថបទ SRT (Paste SRT Text)";
+                cardSrt.style.pointerEvents = 'auto';
+                cardSrt.style.opacity = '1.0';
+                if (selectedSrtFiles && selectedSrtFiles.length > 1) {
+                    statusSrt.innerText = `✅ បានជ្រើស ${selectedSrtFiles.length} ឯកសារ SRT`;
+                } else if (selectedSrtFile) {
+                    statusSrt.innerText = selectedSrtFile.name;
+                } else {
+                    statusSrt.innerText = "មិនទាន់ជ្រើសរើសឯកសារ SRT នៅឡើយ...";
+                }
+                if (selectedSrtFile || (selectedSrtFiles && selectedSrtFiles.length > 0)) statusSrt.classList.add('selected');
+                else statusSrt.classList.remove('selected');
+            }
+        }
+
+        function handleSrtTextChange(val) {
+            srtTextContent = val;
+            const statusSrt = document.getElementById('status-srt');
+            if (srtTextContent.trim()) {
+                statusSrt.innerText = "បានបិទភ្ជាប់អត្ថបទ SRT រួចរាល់";
+                statusSrt.classList.add('selected');
+            } else {
+                statusSrt.innerText = "សូមបិទភ្ជាប់អត្ថបទ SRT ខាងក្រោម";
+                statusSrt.classList.remove('selected');
+            }
+        }
+
+        // Helper to construct API endpoints supporting custom Backend Server URL (saved in localStorage)
+        function getApiUrl(endpoint) {
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            if (customBackendUrl) {
+                const base = customBackendUrl.endsWith('/') ? customBackendUrl.slice(0, -1) : customBackendUrl;
+                const path = endpoint.startsWith('/') ? endpoint : '/' + endpoint;
+                return base + path;
+            }
+            return endpoint;
+        }
+
+        // Save server URL in localStorage
+        function updateBackendUrl(val) {
+            val = val.trim();
+            if (val && !val.startsWith('http://') && !val.startsWith('https://')) {
+                val = 'http://' + val;
+            }
+            localStorage.setItem('backend_url', val);
+            const input = document.getElementById('backend-url-input');
+            if (input) input.value = val;
+            showToast("បានរក្សាទុកអាសយដ្ឋាន Server");
+            checkEngineStatus();
+        }
+
+        // Check TTS engine status from server and update badge
+        function checkEngineStatus() {
+            const badge = document.getElementById('tts-engine-badge');
+            const dot   = document.getElementById('tts-engine-dot');
+            const label = document.getElementById('tts-engine-label');
+            if (!badge) return;
+
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (!isServer) {
+                dot.style.background = '#ffa000';
+                label.innerText = 'Preview Mode (server.py needed for dub)';
+                badge.style.borderColor = 'rgba(255,160,0,0.3)';
+                return;
+            }
+
+            fetch(getApiUrl('/api/engine-status'))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.active_engine === 'edge-tts' && data.edge_tts_available) {
+                        dot.style.background = '#00e5a0';
+                        label.innerText = '✔ Edge TTS — ពិសិដ្ឋ / ស្រីមុំ (Neural)';
+                        badge.style.borderColor = 'rgba(0,229,160,0.3)';
+                    } else if (data.gtts_available) {
+                        dot.style.background = '#ffa000';
+                        label.innerText = '⚠ gTTS (Google Khmer) — Edge TTS offline';
+                        badge.style.borderColor = 'rgba(255,160,0,0.3)';
+                    } else {
+                        dot.style.background = '#ff4444';
+                        label.innerText = '❌ TTS offline — check internet';
+                        badge.style.borderColor = 'rgba(255,68,68,0.3)';
+                    }
+                })
+                .catch(() => {
+                    dot.style.background = '#ff4444';
+                    label.innerText = 'Server offline — ពិនិត្យមើលអាសយដ្ឋាន Server';
+                    badge.style.borderColor = 'rgba(255,68,68,0.3)';
+                });
+        }
+
+        // Run a real voice test and update badge with result
+        function runVoiceTest() {
+            const dot   = document.getElementById('tts-engine-dot');
+            const label = document.getElementById('tts-engine-label');
+            dot.style.background = '#7c4dff';
+            label.innerText = 'កំពុងសាកល្បង...';
+
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (!isServer) {
+                showToast('សូមដំណើរការ server.py ដើម្បីសាកល្បងសំឡេងបាន');
+                return;
+            }
+
+            fetch(getApiUrl('/api/test-voice'))
+                .then(r => r.json())
+                .then(data => {
+                    if (data.edge_tts) {
+                        dot.style.background = '#00e5a0';
+                        label.innerText = '✔ Edge TTS OK — ពិសិដ្ឋ / ស្រីមុំ (Neural) បាន';
+                        showToast('✅ Edge TTS ដំណើរការបាន! សំឡេងពិសិដ្ឋ / ស្រីមុំន៉ុងក្តែ');
+                    } else if (data.gtts) {
+                        dot.style.background = '#ffa000';
+                        label.innerText = '⚠ gTTS OK — Google Khmer (ពិសិដ្ឋមិនអាច្បរបាស់)';
+                        showToast('⚠ Edge TTS offline — ប្តូរទៅ gTTS (Google Khmer) ជំនួសវិញ');
+                    } else {
+                        dot.style.background = '#ff4444';
+                        label.innerText = '❌ TTS engines failed — check internet!';
+                        showToast('❌ សំឡេង TTS មានបញ្ហា! សូមពិនិត័យហើ internet');
+                    }
+                    showToast(data.message || 'Test complete');
+                })
+                .catch(e => {
+                    dot.style.background = '#ff4444';
+                    label.innerText = 'Server error';
+                    showToast('❌ Server មានបញ្ហា: ' + e.message);
+                });
+        }
+
+
+        // Custom alert function
+        function customAlert(message, showDemoOption = false) {
+            document.getElementById('alert-modal-body').innerText = message;
+            const demoBtn = document.getElementById('alert-btn-demo');
+            if (showDemoOption) {
+                demoBtn.style.display = 'block';
+            } else {
+                demoBtn.style.display = 'none';
+            }
+            openModal('alert-modal');
+        }
+
+        // Mock SRT subtitles for Demo Mode
+        const mockSrtText = `1
+00:00:01,000 --> 00:00:04,500
+សួស្តីបងប្អូនទាំងអស់គ្នា! ស្វាគមន៍មកកាន់ការសាកល្បងបញ្ចូលសំឡេង។
+
+2
+00:00:05,000 --> 00:00:09,000
+នេះជាការបង្ហាញអំពីបច្ចេកវិទ្យា AI Dubbing ភាសាខ្មែរ។
+
+3
+00:00:09,500 --> 00:00:14,000
+សំឡេងនិយាយខ្មែរនឹងត្រូវអានដោយស្វ័យប្រវត្តិតាមវិនាទីនៃឯកសារ SRT របស់អ្នក។`;
+
+        // Demo mode execution helper
+        function runDemoMode() {
+            closeModal('alert-modal');
+            
+            // Populate mock files
+            const statusVideo = document.getElementById('status-video');
+            const removeVideo = document.getElementById('remove-video');
+            const arrowVideo = document.getElementById('arrow-video');
+            statusVideo.innerText = "sample_original_video.mp4 (45.2 MB)";
+            statusVideo.classList.add('selected');
+            removeVideo.style.display = 'flex';
+            arrowVideo.style.display = 'none';
+            selectedVideoFile = { name: "sample_original_video.mp4", size: 47395810 };
+
+            const statusSrt = document.getElementById('status-srt');
+            const removeSrt = document.getElementById('remove-srt');
+            const arrowSrt = document.getElementById('arrow-srt');
+            statusSrt.innerText = "sample_subtitles_kh.srt (12 KB)";
+            statusSrt.classList.add('selected');
+            removeSrt.style.display = 'flex';
+            arrowSrt.style.display = 'none';
+            selectedSrtFile = { name: "sample_subtitles_kh.srt" };
+            srtTextContent = mockSrtText;
+
+            showToast("ដំណើរការសាកល្បង (Demo Mode)");
+            
+            // Start simulation
+            setTimeout(() => {
+                startTranslation();
+            }, 300);
+        }
+
+        // Theme management
+        function toggleTheme() {
+            const html = document.documentElement;
+            const currentTheme = html.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            html.setAttribute('data-theme', newTheme);
+            
+            // Toggle icon
+            const themeIcon = document.getElementById('theme-icon');
+            if (newTheme === 'light') {
+                themeIcon.innerHTML = `<path d="M12 3c-4.97 0-9 4.03-9 9s4.03 9 9 9 9-4.03 9-9c0-.46-.04-.92-.1-1.36-.98 1.37-2.58 2.26-4.4 2.26-2.98 0-5.4-2.42-5.4-5.4 0-1.81.89-3.42 2.26-4.4-.44-.06-.9-.1-1.36-.1z"/>`;
+            } else {
+                themeIcon.innerHTML = `<path d="M20 15.31L23.31 12 20 8.69V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69zM12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6 6 2.69 6 6-2.69 6-6 6z"/>`;
+            }
+        }
+
+        // Toggle Translation Mode Header Button
+        function toggleTranslationMode() {
+            isKhmerOnlyMode = !isKhmerOnlyMode;
+            const btn = document.getElementById('btn-lang');
+            const sub = document.getElementById('brand-sub');
+            
+            if (isKhmerOnlyMode) {
+                btn.classList.add('active');
+                sub.innerText = "បកប្រែវីដេអូស្វ័យប្រវត្តិតាមរយៈ Edge TTS (ពិសិដ្ឋ & ស្រីមុំ) - របៀបបកប្រែរហ័ស";
+                showToast("បានបើក៖ របៀបបកប្រែរហ័ស");
+            } else {
+                btn.classList.remove('active');
+                sub.innerText = "បកប្រែវីដេអូស្វ័យប្រវត្តិតាមរយៈ Edge TTS (ពិសិដ្ឋ & ស្រីមុំ)";
+                showToast("បានបិទ៖ របៀបបកប្រែរហ័ស");
+            }
+        }
+
+        // Dropdown Engine selection update toast
+        function updateEngine(val) {
+            showToast("បានប្តូរម៉ាស៊ីនបកប្រែទៅ៖ " + val.toUpperCase());
+        }
+
+        // Slider value rendering
+        function updateSliderValue(slider, targetId) {
+            document.getElementById(targetId).innerText = slider.value + "%";
+        }
+
+        // File Selection Handlers — Android WebView compatible
+        function triggerVideoUpload(event) {
+            // Don't trigger if user clicked the remove button
+            if (event && event.target && event.target.closest('#remove-video')) return;
+            // Don't trigger if card is disabled (URL mode active)
+            if (isVideoUrlMode) return;
+            const inp = document.getElementById('input-video');
+            // Reset value so same file can be re-selected
+            try { inp.value = ''; } catch(e) {}
+            inp.click();
+        }
+
+        function triggerSrtUpload(event) {
+            // Don't trigger if user clicked the remove button
+            if (event && event.target && event.target.closest('#remove-srt')) return;
+            // Don't trigger if card is disabled (text paste mode active)
+            if (isSrtTextMode) return;
+            const inp = document.getElementById('input-srt');
+            try { inp.value = ''; } catch(e) {}
+            inp.click();
+        }
+
+        // Legacy helper (kept for compatibility)
+        function triggerFileInput(id) {
+            const inp = document.getElementById(id);
+            try { inp.value = ''; } catch(e) {}
+            setTimeout(function() { inp.click(); }, 50);
+        }
+
+        // Parse SRT text content into structured blocks
+        function parseSRT(text) {
+            const blocks = [];
+            const rawBlocks = text.replace(/\r\n/g, '\n').trim().split('\n\n');
+            for (let block of rawBlocks) {
+                const lines = block.split('\n');
+                if (lines.length >= 3) {
+                    const idx = lines[0].trim();
+                    const timeLine = lines[1].trim();
+                    const textContent = lines.slice(2).join(' ').trim();
+
+                    const match = timeLine.match(/(\d{2}):(\d{2}):(\d{2})[,\.](\d{3})\s*-->\s*(\d{2}):(\d{2}):(\d{2})[,\.](\d{3})/);
+                    if (match) {
+                        const start = srtTimeToMs(parseInt(match[1]), parseInt(match[2]), parseInt(match[3]), parseInt(match[4]));
+                        const end   = srtTimeToMs(parseInt(match[5]), parseInt(match[6]), parseInt(match[7]), parseInt(match[8]));
+                        blocks.push({ id: idx, start, end, text: textContent });
+                    }
+                }
+            }
+            return blocks;
+        }
+
+        function srtTimeToMs(h, m, s, ms) {
+            return h * 3600000 + m * 60000 + s * 1000 + ms;
+        }
+
+        function formatMsToSRTTime(ms) {
+            let temp = ms;
+            const hour = Math.floor(temp / 3600000); temp %= 3600000;
+            const min  = Math.floor(temp / 60000);   temp %= 60000;
+            const sec  = Math.floor(temp / 1000);
+            const milli = temp % 1000;
+            return `${String(hour).padStart(2,'0')}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')},${String(milli).padStart(3,'0')}`;
+        }
+
+        function blocksToSrtString(blocks) {
+            let srt = "";
+            for (let i = 0; i < blocks.length; i++) {
+                const b = blocks[i];
+                srt += `${i + 1}\n${formatMsToSRTTime(b.start)} --> ${formatMsToSRTTime(b.end)}\n${b.text}\n\n`;
+            }
+            return srt.trim() + "\n";
+        }
+
+        // Chronologically merges multiple SRT files alphabetically by filename.
+        function mergeSrtBlocks(filesData) {
+            filesData.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+            let mergedBlocks = [];
+            let cumulativeShiftMs = 0;
+            let lastBlockId = 0;
+
+            for (let file of filesData) {
+                const blocks = parseSRT(file.content);
+                if (blocks.length === 0) continue;
+
+                if (mergedBlocks.length > 0) {
+                    const lastEnd    = mergedBlocks[mergedBlocks.length - 1].end;
+                    const firstStart = blocks[0].start;
+                    if (firstStart < 30000 && firstStart < lastEnd) {
+                        cumulativeShiftMs = lastEnd;
+                    } else {
+                        cumulativeShiftMs = 0;
+                    }
+                }
+
+                for (let block of blocks) {
+                    lastBlockId++;
+                    mergedBlocks.push({
+                        id: lastBlockId,
+                        start: block.start + cumulativeShiftMs,
+                        end:   block.end   + cumulativeShiftMs,
+                        text:  block.text
+                    });
+                }
+            }
+            return mergedBlocks;
+        }
+
+        // Handle file drop or selection
+        function handleFileChange(input, type) {
+            if (input.files && input.files.length > 0) {
+                const statusEl = document.getElementById(`status-${type}`);
+                const removeEl = document.getElementById(`remove-${type}`);
+                const arrowEl  = document.getElementById(`arrow-${type}`);
+
+                if (type === 'video') {
+                    const files = Array.from(input.files);
+                    if (files.length === 1) {
+                        const file = files[0];
+                        selectedVideoFile  = file;
+                        selectedVideoFiles = [file];
+                        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+                        statusEl.innerText = `${file.name} (${sizeMB} MB)`;
+                        statusEl.classList.add('selected');
+                        showToast(`បានបញ្ចូល៖ ${file.name}`);
+                        const blurBtn = document.getElementById('btn-open-blur');
+                        if (blurBtn) blurBtn.style.display = 'flex';
+                    } else {
+                        // Multiple video batch mode
+                        files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                        selectedVideoFile  = files[0];
+                        selectedVideoFiles = files;
+                        statusEl.innerText = `✅ បានជ្រើស ${files.length} វីដេអូ (Batch Mode)`;
+                        statusEl.classList.add('selected');
+                        showToast(`🎉 បានជ្រើសរើសវីដេអូសរុបចំនួន ${files.length} ឯកសារ!`);
+                        const blurBtn = document.getElementById('btn-open-blur');
+                        if (blurBtn) blurBtn.style.display = 'flex';
+                    }
+
+                } else if (type === 'srt') {
+                    const files = Array.from(input.files);
+                    if (files.length === 1) {
+                        // Single SRT
+                        const file = files[0];
+                        selectedSrtFile  = file;
+                        selectedSrtFiles = [file];
+                        statusEl.innerText = file.name;
+                        statusEl.classList.add('selected');
+                        const reader = new FileReader();
+                        reader.onload = (e) => { srtTextContent = e.target.result; };
+                        reader.readAsText(file);
+                        showToast(`បានបញ្ចូល៖ ${file.name}`);
+                    } else {
+                        // Multiple SRT — server will split the video automatically
+                        selectedSrtFile  = { name: `ឯកសារ SRT ចំនួន ${files.length}` };
+                        // Sort files alphabetically by name to guarantee correct chronological order (part1, part2, etc.)
+                        files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                        selectedSrtFiles = files;  // keep individual File objects sorted
+                        statusEl.innerText = `✅ បានជ្រើស ${files.length} ឯកសារ SRT (Split Mode)`;
+                        statusEl.classList.add('selected');
+                        // Read first file for text-preview only
+                        const reader = new FileReader();
+                        reader.onload = (e) => { srtTextContent = e.target.result; };
+                        reader.readAsText(files[0]);
+                        showToast(`🎉 SRT ${files.length} ឯកសារ — វីដេអូនឹងត្រូវបែងចែកជា ${files.length} ផ្នែក!`);
+                    }
+                }
+
+                removeEl.style.display = 'flex';
+                arrowEl.style.display  = 'none';
+            }
+        }
+
+        function clearFile(event, type) {
+            event.stopPropagation(); // Stop upload card click event triggering
+            
+            const input = document.getElementById(`input-${type}`);
+            const statusEl = document.getElementById(`status-${type}`);
+            const removeEl = document.getElementById(`remove-${type}`);
+            const arrowEl = document.getElementById(`arrow-${type}`);
+
+            input.value = "";
+            statusEl.classList.remove('selected');
+            removeEl.style.display = 'none';
+            arrowEl.style.display = 'flex';
+
+            if (type === 'video') {
+                selectedVideoFile = null;
+                selectedVideoFiles = [];
+                statusEl.innerText = "មិនទាន់ជ្រើសរើសវីដេអូនៅឡើយទេ";
+                // Hide blur editor button and reset zones
+                const blurBtn = document.getElementById('btn-open-blur');
+                if (blurBtn) {
+                    blurBtn.style.display = 'none';
+                    blurBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur`;
+                    blurBtn.style.borderColor = 'rgba(0,229,255,0.35)';
+                    blurBtn.style.background = 'rgba(0,229,255,0.1)';
+                    blurBtn.style.color = 'var(--color-cyan)';
+                }
+                blurZones = [];
+                updateBlurZonesList && updateBlurZonesList();
+            } else if (type === 'srt') {
+                selectedSrtFile = null;
+                selectedSrtFiles = [];
+                statusEl.innerText = "មិនទាន់ជ្រើសរើសឯកសារ SRT នៅឡើយ...";
+            }
+            showToast("បានលុបឯកសារចេញ");
+        }
+
+        // Speaker Selection from main screen cards
+        function selectVoice(el, voice) {
+            // Remove selection class from all
+            document.querySelectorAll('.voice-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            // Add class to clicked
+            el.classList.add('selected');
+            selectedVoice = voice;
+            
+            // Sync with preview dropdown select if it exists
+            const selectEl = document.getElementById('preview-voice-select');
+            if (selectEl) {
+                selectEl.value = voice;
+            }
+            
+            showToast("បានជ្រើសរើសសំឡេង៖ " + el.querySelector('.voice-name').innerText);
+        }
+
+        // Speaker Selection from success preview player dropdown
+        function changePreviewVoice(voice) {
+            selectedVoice = voice;
+            lastSpokenId = -1; // Force immediate re-speaking of the active subtitle block in the new voice
+            
+            // Sync back to main screen cards selection UI state
+            document.querySelectorAll('.voice-option').forEach(opt => {
+                opt.classList.remove('selected');
+                const clickAttr = opt.getAttribute('onclick') || '';
+                if (clickAttr.includes(`'${voice}'`)) {
+                    opt.classList.add('selected');
+                }
+            });
+            
+            // Sync with preview dropdown select
+            const selectEl = document.getElementById('preview-voice-select');
+            if (selectEl) {
+                selectEl.value = voice;
+            }
+            
+            // If the video is currently playing, force repeat of current subtitle immediately
+            const previewPlayer = document.getElementById('preview-player');
+            if (previewPlayer && !previewPlayer.paused) {
+                const currentTimeMs = previewPlayer.currentTime * 1000;
+                const active = parsedSubtitles.find(s => currentTimeMs >= s.start && currentTimeMs <= s.end);
+                if (active) {
+                    lastSpokenId = active.id;
+                    speakSubtitle(active.text);
+                }
+            }
+
+            showToast("បានប្តូរទៅសំឡេង៖ " + (voice === 'Piseth' || voice === 'Chitra' ? 'ប្រុស' : 'ស្រី'));
+        }
+
+        // Modal triggers
+        function openModal(id) {
+            document.getElementById(id).classList.add('open');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('open');
+        }
+
+        // Helper toast notification
+        function showToast(message) {
+            // Create an elegant toast
+            const toast = document.createElement('div');
+            toast.style.position = 'absolute';
+            toast.style.bottom = '100px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%) translateY(20px)';
+            toast.style.background = 'rgba(124, 77, 255, 0.9)';
+            toast.style.color = '#ffffff';
+            toast.style.padding = '10px 20px';
+            toast.style.borderRadius = '30px';
+            toast.style.fontSize = '12px';
+            toast.style.fontWeight = '500';
+            toast.style.boxShadow = '0 10px 20px rgba(0, 0, 0, 0.3)';
+            toast.style.zIndex = '999';
+            toast.style.opacity = '0';
+            toast.style.transition = 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)';
+            toast.style.textAlign = 'center';
+            toast.style.width = '80%';
+            toast.style.pointerEvents = 'none';
+            toast.innerText = message;
+
+            // Append inside phone frame to keep layout clean
+            const frame = document.querySelector('.phone-frame');
+            frame.appendChild(toast);
+
+            // Reflow
+            setTimeout(() => {
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateX(-50%) translateY(0)';
+            }, 50);
+
+            // Remove after 2.5s
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(-50%) translateY(-20px)';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 2500);
+        }
+
+        // Start Generation Action
+        function startTranslation() {
+            // Validation
+            if (isVideoUrlMode) {
+                if (!selectedVideoUrl) {
+                    customAlert("សូមបញ្ចូលតំណភ្ជាប់វីដេអូជាមុនសិន!", false);
+                    return;
+                }
+            } else {
+                if (!selectedVideoFile && (!selectedVideoFiles || selectedVideoFiles.length === 0)) {
+                    customAlert("សូមជ្រើសរើស វីដេអូដើម (Original Video) ជាមុនសិន! ឬចុចប៊ូតុងខាងក្រោមដើម្បីដំណើរការសាកល្បង។", true);
+                    return;
+                }
+            }
+
+            if (isSrtTextMode) {
+                if (!srtTextContent.trim()) {
+                    customAlert("សូមបិទភ្ជាប់អត្ថបទ SRT ជាមុនសិន!", false);
+                    return;
+                }
+            } else {
+                if (!selectedSrtFile && (!selectedSrtFiles || selectedSrtFiles.length === 0)) {
+                    customAlert("សូមជ្រើសរើស ឯកសារអក្សររត់ (SRT Subtitles) ជាមុនសិន! ឬចុចប៊ូតុងខាងក្រោមដើម្បីដំណើរការសាកល្បង។", true);
+                    return;
+                }
+            }
+
+            const overlay = document.getElementById('progress-screen');
+            overlay.classList.add('open');
+
+            const pBar = document.getElementById('progress-bar');
+            const pPct = document.getElementById('progress-percentage');
+            const pTitle = document.getElementById('progress-title');
+            const pSub = document.getElementById('progress-sub');
+            const btnCancel = document.getElementById('btn-cancel-trans');
+            const successBox = document.getElementById('success-box');
+
+            // Reset state
+            successBox.style.display = 'none';
+            btnCancel.style.display = 'block';
+            isDubbedMode = false;  // Reset dubbed mode on new translation start
+            dubbedVideoBlob = null;
+            if (dubbedVideoObjectUrl) {
+                URL.revokeObjectURL(dubbedVideoObjectUrl);
+                dubbedVideoObjectUrl = null;
+            }
+
+            let progress = 0;
+            pBar.style.width = '0%';
+            pPct.innerText = '0%';
+
+            // Determine if we are being served by the Python server, OR if a custom Backend Server URL is configured!
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServerMode = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (isServerMode) {
+                // ===== REAL SERVER-SIDE DUBBING MODE =====
+                // Animate progress while waiting for server response
+                const serverSteps = [
+                    { limit: 10,  title: "កំពុងផ្ញើឯកសារទៅ Server...",              sub: "កំពុង Upload វីដេអូ និង SRT" },
+                    { limit: 30,  title: "Server កំពុងបង្កើតសំឡេង TTS...",          sub: "ដំណើរការ Edge TTS សម្រាប់ subtitle នីមួយៗ" },
+                    { limit: 60,  title: "Server កំពុងបង្កើតសំឡេង TTS...",          sub: "អាចចំណាយពេល ១-៥ នាទី អាស្រ័យលើចំនួន subtitle" },
+                    { limit: 85,  title: "Server កំពុងលាយសំឡេងចូលក្នុងវីដេអូ...",  sub: "FFmpeg កំពុង mix audio + video" },
+                    { limit: 97,  title: "Server កំពុងផ្ញើវីដេអូ dubbing ត្រឡប់...", sub: "ទទួលឯកសារ MP4 ដែល dub រួច" },
+                ];
+
+                // Animate the bar during fetch (slow-ish so it doesn't finish before server)
+                let animProgress = 0;
+                translationInterval = setInterval(() => {
+                    // Slow increment: 0→97% while fetch is pending
+                    const maxNow = serverSteps[serverSteps.length - 1].limit;
+                    if (animProgress < maxNow) {
+                        animProgress += 0.4;
+                        if (animProgress > maxNow) animProgress = maxNow;
+                    }
+                    const displayPct = Math.round(animProgress);
+                    pBar.style.width = displayPct + '%';
+                    pPct.innerText = displayPct + '%';
+                    const step = serverSteps.find(s => displayPct <= s.limit) || serverSteps[serverSteps.length - 1];
+                    pTitle.innerText = step.title;
+                    pSub.innerText = step.sub;
+                }, 300);
+
+                // Build FormData payload
+                const formData = new FormData();
+                if (isVideoUrlMode) {
+                    formData.append('video_url', selectedVideoUrl);
+                } else if (selectedVideoFiles && selectedVideoFiles.length > 1) {
+                    // MULTI-VIDEO MODE: send each video file separately in alphabetical order
+                    selectedVideoFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                    selectedVideoFiles.forEach((file, idx) => {
+                        formData.append(`video_${idx}`, file, file.name);
+                    });
+                    console.log(`[Multi-Video] Sending ${selectedVideoFiles.length} video files for batch dubbing`);
+                } else if (selectedVideoFile instanceof File) {
+                    formData.append('video', selectedVideoFile);
+                }
+
+                if (isSrtTextMode) {
+                    const blob = new Blob([srtTextContent], { type: 'text/plain' });
+                    formData.append('srt', blob, 'subtitles.srt');
+                } else if (selectedSrtFiles && selectedSrtFiles.length > 1) {
+                    // MULTI-SRT MODE: send each SRT file separately in alphabetical order so server can split video
+                    selectedSrtFiles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+                    selectedSrtFiles.forEach((file, idx) => {
+                        formData.append(`srt_${idx}`, file, file.name);
+                    });
+                    console.log(`[Multi-SRT] Sending ${selectedSrtFiles.length} SRT files for split-video dubbing`);
+                } else if (selectedSrtFile instanceof File) {
+                    formData.append('srt', selectedSrtFile);
+                } else {
+                    const blob = new Blob([srtTextContent], { type: 'text/plain' });
+                    formData.append('srt', blob, 'subtitles.srt');
+                }
+
+                formData.append('voice', selectedVoice);
+                formData.append('auto_voice', document.getElementById('toggle-auto-voice').checked);
+                formData.append('orig_vol', document.getElementById('slider-orig').value);
+                formData.append('tts_vol', document.getElementById('slider-tts').value);
+                formData.append('vocal_removed', document.getElementById('toggle-vocal').checked);
+                const speedSelect = document.querySelector('#settings-modal select:last-of-type');
+                formData.append('speed_rate', speedSelect ? speedSelect.value : '1.0');
+
+                // Send to server
+                currentFetchAbortController = new AbortController();
+                fetch(getApiUrl('/api/dub'), {
+                    method: 'POST',
+                    body: formData,
+                    signal: currentFetchAbortController.signal
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        return response.text().then(txt => {
+                            throw new Error(txt || `Server error ${response.status}`);
+                        });
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    const taskId = data.task_id;
+                    if (!taskId) {
+                        throw new Error("Server did not return a valid Task ID.");
+                    }
+                    
+                    // Stop client-side fake animation and switch to real task progress polling
+                    clearInterval(translationInterval);
+                    
+                    // Polling interval
+                    translationInterval = setInterval(() => {
+                        fetch(getApiUrl(`/api/status?task_id=${taskId}`), {
+                            signal: currentFetchAbortController.signal
+                        })
+                        .then(res => {
+                            if (!res.ok) throw new Error("Failed to fetch task status.");
+                            return res.json();
+                        })
+                        .then(statusData => {
+                            // Update progress UI
+                            const progressVal = statusData.progress_pct || 0;
+                            pBar.style.width = progressVal + '%';
+                            pPct.innerText = progressVal + '%';
+                            pTitle.innerText = statusData.message || "កំពុងដំណើរការ...";
+                            
+                            if (statusData.status === 'completed') {
+                                clearInterval(translationInterval);
+                                translationInterval = null;
+                                
+                                pTitle.innerText = 'កំពុងទាញយកវីដេអូ...';
+                                pSub.innerText = 'កំពុងផ្ទេរឯកសារត្រឡប់មកទូរសព្ទរបស់អ្នក';
+                                
+                                // Fetch final download file
+                                fetch(getApiUrl(`/api/download?task_id=${taskId}`), {
+                                    signal: currentFetchAbortController.signal
+                                })
+                                .then(dlRes => {
+                                    if (!dlRes.ok) throw new Error("Failed to download video file.");
+                                    const encPath = dlRes.headers.get('X-Output-Path');
+                                    if (encPath) {
+                                        try {
+                                            window.lastServerOutputPath = decodeURIComponent(encPath);
+                                        } catch (e) {
+                                            console.warn('Failed decode X-Output-Path:', e);
+                                        }
+                                    } else {
+                                        window.lastServerOutputPath = null;
+                                    }
+                                    return dlRes.blob();
+                                })
+                                .then(blob => {
+                                    dubbedVideoBlob = blob;
+                                    dubbedVideoObjectUrl = URL.createObjectURL(blob);
+                                    isDubbedMode = true;
+
+                                    if (currentTTSAudio) {
+                                        currentTTSAudio.pause();
+                                        currentTTSAudio = null;
+                                    }
+                                    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+                                    pBar.style.width = '100%';
+                                    pPct.innerText = '100%';
+                                    pTitle.innerText = 'Dubbing រួចរាល់ស្ថាពរ!';
+                                    if (window.lastServerOutputPath) {
+                                        pSub.innerHTML = 'វីដេអូបានបញ្ចូលសំឡេងខ្មែររួចរាល់!<br><span style="color: #00e5ff; font-size: 11.5px; word-break: break-all; font-weight: 500;">រក្សាទុកក្នុងកុំព្យូទ័រ៖ ' + window.lastServerOutputPath + '</span>';
+                                    } else {
+                                        pSub.innerText = 'វីដេអូបានបញ្ចូលសំឡេងខ្មែររួចរាល់ — ចុចទាញយក!';
+                                    }
+
+                                    parsedSubtitles = parseSRT(srtTextContent);
+                                    lastSpokenId = -1;
+
+                                    const previewPlayer = document.getElementById('preview-player');
+                                    previewPlayer.src = dubbedVideoObjectUrl;
+                                    previewPlayer.volume = 1.0;
+                                    document.getElementById('preview-subtitles').innerText = '';
+
+                                    const selectEl = document.getElementById('preview-voice-select');
+                                    if (selectEl) selectEl.value = selectedVoice;
+
+                                    btnCancel.style.display = 'none';
+                                    successBox.style.display = 'flex';
+
+                                    const previewVoiceRow = document.querySelector('#success-box .custom-select');
+                                    if (previewVoiceRow) {
+                                        previewVoiceRow.closest('div[style]') && (previewVoiceRow.closest('div').style.display = 'none');
+                                    }
+
+                                    showToast('✅ Dubbing ជោគជ័យ! សំឡេង ' + selectedVoice + ' បានបញ្ចូលក្នុងវីដេអូហើយ');
+                                    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 100]);
+                                })
+                                .catch(err => handleCompilationError(err));
+                            } else if (statusData.status === 'failed') {
+                                clearInterval(translationInterval);
+                                translationInterval = null;
+                                throw new Error(statusData.error || "Compilation failed on server.");
+                            }
+                        })
+                        .catch(err => handleCompilationError(err));
+                    }, 1500);
+                })
+                .catch(err => handleCompilationError(err));
+
+                function handleCompilationError(err) {
+                    if (err.name === 'AbortError') return;
+                    clearInterval(translationInterval);
+                    translationInterval = null;
+                    console.error('Dubbing error:', err);
+                    pTitle.innerText = 'បរាជ័យ! Server មានបញ្ហា';
+                    pSub.innerText = err.message || 'សូម check console ឬ restart server.py';
+                    pBar.style.background = 'linear-gradient(90deg, #ff4444, #ff6666)';
+                    showToast('❌ Dubbing Failed: ' + (err.message || 'Unknown error'));
+                    btnCancel.innerText = 'បិទ (Close)';
+                }
+
+            } else {
+                // ===== BROWSER FILE:// MODE — TTS Preview Simulation =====
+                const steps = [
+                    { limit: 20,  title: "កំពុងអានវីដេអូ និងបំប្លែងកូដ...",         sub: "អានទិន្នន័យរូបភាព និងសំឡេងពីឧបករណ៍" },
+                    { limit: 45,  title: "កំពុងវិភាគឯកសារអក្សររត់ SRT...",          sub: "ស្វែងរក និងផ្គូរផ្គងពេលវេលាអត្ថបទ" },
+                    { limit: 75,  title: "កំពុងដំណើរការ TTS Preview...",              sub: "បន្ទាប់ play វីដេអូ — TTS នឹង sync ស្វ័យប្រវត្តិ" },
+                    { limit: 92,  title: "កំពុងរៀបចំ Preview Player...",             sub: "ត្រូវការ server.py ដើម្បី export វីដេអូពិត" },
+                    { limit: 100, title: "TTS Preview Mode រួចរាល់!",                sub: "▶ Play វីដេអូ — TTS preview នឹង sync ផ្ទាល់" }
+                ];
+
+                translationInterval = setInterval(() => {
+                    progress += Math.floor(Math.random() * 3) + 1;
+                    if (progress > 100) progress = 100;
+
+                    pBar.style.width = progress + '%';
+                    pPct.innerText = progress + '%';
+
+                    const currentStep = steps.find(s => progress <= s.limit) || steps[steps.length - 1];
+                    pTitle.innerText = currentStep.title;
+                    pSub.innerText = currentStep.sub;
+
+                    if (progress >= 100) {
+                        clearInterval(translationInterval);
+                        translationInterval = null;
+
+                        parsedSubtitles = parseSRT(srtTextContent);
+                        lastSpokenId = -1;
+
+                        const previewPlayer = document.getElementById('preview-player');
+                        if (isVideoUrlMode && selectedVideoUrl) {
+                            previewPlayer.src = selectedVideoUrl;
+                        } else if (selectedVideoFile instanceof File) {
+                            previewPlayer.src = URL.createObjectURL(selectedVideoFile);
+                        } else {
+                            previewPlayer.src = 'https://www.w3schools.com/html/mov_bbb.mp4';
+                        }
+                        previewPlayer.volume = parseInt(document.getElementById('slider-orig').value) / 100;
+                        document.getElementById('preview-subtitles').innerText = '';
+
+                        const selectEl = document.getElementById('preview-voice-select');
+                        if (selectEl) selectEl.value = selectedVoice;
+
+                        btnCancel.style.display = 'none';
+                        successBox.style.display = 'flex';
+
+                        showToast('▶ TTS Preview Mode — ចុច Play ដើម្បី preview សំឡេង');
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                    }
+                }, 150);
+            }
+        }
+
+        // Parse SRT string to subtitles array
+        function parseSRT(srtText) {
+            if (!srtText) return [];
+            const lines = srtText.replace(/\r/g, '').split('\n');
+            const result = [];
+            let currentItem = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+                
+                // If it's a number, it's the start of a block
+                if (/^\d+$/.test(line)) {
+                    if (currentItem) result.push(currentItem);
+                    currentItem = { id: parseInt(line), start: 0, end: 0, text: "" };
+                } else if (line.includes('-->')) {
+                    if (currentItem) {
+                        const parts = line.split('-->');
+                        currentItem.start = parseSRTTime(parts[0].trim());
+                        currentItem.end = parseSRTTime(parts[1].trim());
+                    }
+                } else {
+                    if (currentItem) {
+                        if (currentItem.text) currentItem.text += " " + line;
+                        else currentItem.text = line;
+                    }
+                }
+            }
+            if (currentItem) result.push(currentItem);
+            return result;
+        }
+
+        // Convert 00:00:00,000 to milliseconds
+        function parseSRTTime(timeStr) {
+            if (!timeStr) return 0;
+            timeStr = timeStr.trim();
+            const match = timeStr.match(/(?:(\d+):)?(\d+):(\d+)[,\.](\d+)/);
+            if (match) {
+                const hour = parseInt(match[1] || '0', 10);
+                const min = parseInt(match[2] || '0', 10);
+                const sec = parseInt(match[3] || '0', 10);
+                const ms = parseInt(match[4] || '0', 10);
+                return ((hour * 3600) + (min * 60) + sec) * 1000 + ms;
+            }
+            try {
+                const parts = timeStr.split(':');
+                const hour = parts.length > 2 ? parseInt(parts[0], 10) : 0;
+                const min = parts.length > 2 ? parseInt(parts[1], 10) : parseInt(parts[0] || '0', 10);
+                const secStr = parts.length > 2 ? parts[2] : parts[1] || '0';
+                const secParts = secStr.split(/[\.,]/);
+                const sec = parseInt(secParts[0] || '0', 10);
+                const ms = parseInt(secParts[1] || '0', 10);
+                return ((hour * 3600) + (min * 60) + sec) * 1000 + ms;
+            } catch (e) {
+                console.error("Failed to parse SRT time:", timeStr, e);
+                return 0;
+            }
+        }
+
+        // Flag: only show the TTS-unavailable notice ONCE per session (avoid spam)
+        let ttsErrorNotified = false;
+
+        // Speak Khmer text via /api/tts (server mode) or silent fallback (file:// mode)
+        function speakSubtitle(text) {
+            // Safety guard: if dubbed video is playing, audio is already baked in — skip!
+            if (isDubbedMode) return;
+
+            if (currentTTSAudio) {
+                currentTTSAudio.pause();
+                currentTTSAudio = null;
+            }
+            if (window.speechSynthesis && window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            const previewPlayer = document.getElementById('preview-player');
+            const originalVolume = parseInt(document.getElementById('slider-orig').value) / 100;
+            const ttsVolume = parseInt(document.getElementById('slider-tts').value) / 100;
+
+            // Adjust original video volume while TTS speaks
+            const vocalRemoved = document.getElementById('toggle-vocal').checked;
+            previewPlayer.volume = vocalRemoved ? (originalVolume * 0.15) : originalVolume;
+
+            // Auto-detect voice parameter inside SRT text tag if checked
+            let voiceToUse = selectedVoice;
+            let textToUse = text;
+            let pitchToUse = "";
+
+            const isAutoVoice = document.getElementById('toggle-auto-voice') && document.getElementById('toggle-auto-voice').checked;
+            if (isAutoVoice) {
+                const tagMatch = text.match(/<dubbing\s+[^>]*voice="([^"]+)"[^>]*>(.*?)<\/dubbing>/i);
+                if (tagMatch) {
+                    let v = tagMatch[1].trim().toLowerCase();
+                    if (v === 'sreymom' || v.includes('sreymom')) {
+                        voiceToUse = 'Sreymom';
+                    } else if (v === 'piseth' || v.includes('piseth')) {
+                        voiceToUse = 'Piseth';
+                    } else if (v === 'sokha' || v.includes('sokha')) {
+                        voiceToUse = 'Sokha';
+                    } else if (v === 'chitra' || v.includes('chitra')) {
+                        voiceToUse = 'Chitra';
+                    } else {
+                        voiceToUse = tagMatch[1].trim();
+                    }
+                    textToUse = tagMatch[2].trim();
+                    
+                    const pitchMatch = tagMatch[0].match(/pitch="([^"]+)"/i);
+                    if (pitchMatch) {
+                        pitchToUse = pitchMatch[1].trim();
+                    }
+                }
+            } else {
+                // Strip tags if auto-voice is disabled to avoid text synthesizers reading them literally
+                textToUse = text.replace(/<dubbing[^>]*>/gi, "").replace(/<\/dubbing>/gi, "");
+            }
+
+            // Build TTS URL
+            let url = '';
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (isServer) {
+                // Use server-side edge-tts / gTTS endpoint
+                let ttsQuery = `/api/tts?voice=${voiceToUse}&text=${encodeURIComponent(textToUse)}&t=${Date.now()}`;
+                if (pitchToUse) {
+                    ttsQuery += `&pitch=${encodeURIComponent(pitchToUse)}`;
+                }
+                url = getApiUrl(ttsQuery);
+            } else {
+                // file:// mode: try Google Translate TTS (may be blocked)
+                url = `https://translate.google.com/translate_tts?ie=UTF-8&tl=km&client=tw-ob&q=${encodeURIComponent(textToUse)}`;
+            }
+
+            const speedSelect = document.querySelector('#settings-modal select:last-of-type');
+            const playRate = parseFloat((speedSelect && speedSelect.value) || '1.0') || 1.0;
+
+            currentTTSAudio = new Audio();
+            currentTTSAudio.referrerPolicy = 'no-referrer';
+            currentTTSAudio.src = url;
+            currentTTSAudio.volume = ttsVolume;
+            currentTTSAudio.playbackRate = playRate;
+
+            // Silent error handler — no repeated toasts
+            currentTTSAudio.onerror = function() {
+                console.warn('[TTS] Audio load failed, trying Web Speech API silently');
+                // Only show ONE notification per session (not every subtitle)
+                if (!ttsErrorNotified && !window.location.protocol.startsWith('http')) {
+                    ttsErrorNotified = true;
+                    showToast('⚠ TTS Preview: Google TTS blocked — ប្រើ Web Speech API ជំនួស');
+                }
+                speakViaSpeechSynthesis(textToUse, ttsVolume, playRate);
+            };
+
+            currentTTSAudio.play().catch(e => {
+                console.warn('[TTS] play() blocked:', e.message || e);
+                // Silently fall back — no toast spam
+                speakViaSpeechSynthesis(textToUse, ttsVolume, playRate);
+            });
+
+            currentTTSAudio.onended = () => {
+                previewPlayer.volume = originalVolume; // Restore volume after TTS ends
+            };
+        }
+
+
+        // Web Speech API Fallback Player
+        function speakViaSpeechSynthesis(text, volume, rate) {
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.volume = volume;
+            utterance.rate = rate;
+            
+            // Try to find a Khmer voice in user's browser
+            const voices = window.speechSynthesis.getVoices();
+            let khmerVoice = voices.find(v => v.lang === 'km-KH' || v.lang.startsWith('km') || v.name.toLowerCase().includes('khmer'));
+            
+            if (khmerVoice) {
+                utterance.voice = khmerVoice;
+            } else {
+                console.log("No Khmer voice found in system SpeechSynthesis. Using default voice.");
+            }
+            
+            window.speechSynthesis.speak(utterance);
+            
+            utterance.onend = () => {
+                const previewPlayer = document.getElementById('preview-player');
+                const originalVolume = parseInt(document.getElementById('slider-orig').value) / 100;
+                previewPlayer.volume = originalVolume;
+            };
+        }
+
+        // Initialize preview player event listeners
+        window.addEventListener('DOMContentLoaded', () => {
+            const previewPlayer = document.getElementById('preview-player');
+            const previewSubtitles = document.getElementById('preview-subtitles');
+            
+            previewPlayer.addEventListener('timeupdate', () => {
+                if (parsedSubtitles.length === 0) return;
+                
+                const currentTimeMs = previewPlayer.currentTime * 1000;
+                const active = parsedSubtitles.find(s => currentTimeMs >= s.start && currentTimeMs <= s.end);
+                
+                if (active) {
+                    previewSubtitles.innerText = active.text;
+
+                    // KEY FIX: Only call speakSubtitle() in TTS preview mode (file://).
+                    // In isDubbedMode, Piseth/Sreymom audio is already baked into the video
+                    // — calling speakSubtitle() here would add a SECOND wrong voice on top!
+                    if (!isDubbedMode && lastSpokenId !== active.id) {
+                        lastSpokenId = active.id;
+                        speakSubtitle(active.text);
+                    }
+                } else {
+                    previewSubtitles.innerText = '';
+                }
+            });
+            
+            previewPlayer.addEventListener('pause', () => {
+                if (currentTTSAudio) currentTTSAudio.pause();
+            });
+            
+            previewPlayer.addEventListener('seeking', () => {
+                if (currentTTSAudio) currentTTSAudio.pause();
+                lastSpokenId = -1; // Force re-speak active caption after seek
+            });
+
+            // Auto-populate backend URL input from localStorage
+            const savedBackendUrl = localStorage.getItem('backend_url') || '';
+            const backendInput = document.getElementById('backend-url-input');
+            if (backendInput) {
+                backendInput.value = savedBackendUrl;
+            }
+
+            // Auto-check TTS engine status on page load
+            checkEngineStatus();
+        });
+
+        let currentTranscribeAbortController = null;
+
+        function cancelTranslation() {
+            if (translationInterval) {
+                clearInterval(translationInterval);
+                translationInterval = null;
+            }
+            // Abort any in-progress server fetch
+            if (currentFetchAbortController) {
+                currentFetchAbortController.abort();
+                currentFetchAbortController = null;
+            }
+            if (currentTranscribeAbortController) {
+                currentTranscribeAbortController.abort();
+                currentTranscribeAbortController = null;
+            }
+            isDubbedMode = false;
+            const previewPlayer = document.getElementById('preview-player');
+            if (previewPlayer) previewPlayer.pause();
+            if (currentTTSAudio) { currentTTSAudio.pause(); currentTTSAudio = null; }
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            // Reset progress bar color
+            const pBar = document.getElementById('progress-bar');
+            if (pBar) pBar.style.background = '';
+            const btnCancel = document.getElementById('btn-cancel-trans');
+            if (btnCancel) btnCancel.innerText = 'បោះបង់ (Cancel)';
+            document.getElementById('progress-screen').classList.remove('open');
+            showToast('បានបោះបង់ដំណើរការ');
+        }
+
+        function downloadSrtFile() {
+            const text = (document.getElementById('srt-text-input').value || srtTextContent || '').trim();
+            if (!text) {
+                showToast("⚠️ គ្មានអត្ថបទ SRT សម្រាប់ទាញយកទេ!");
+                return;
+            }
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'subtitles_khmer.srt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            showToast("📥 បានទាញយកឯកសារ subtitles_khmer.srt រួចរាល់!");
+        }
+
+        function copySrtContent() {
+            const text = (document.getElementById('srt-text-input').value || srtTextContent || '').trim();
+            if (!text) {
+                showToast("⚠️ គ្មានអត្ថបទ SRT សម្រាប់ចម្លងទេ!");
+                return;
+            }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    showToast("📋 បានចម្លងអត្ថបទ SRT រួចរាល់!");
+                }).catch(err => {
+                    fallbackCopySrt(text);
+                });
+            } else {
+                fallbackCopySrt(text);
+            }
+        }
+
+        function fallbackCopySrt(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+            showToast("📋 បានចម្លងអត្ថបទ SRT រួចរាល់!");
+        }
+
+        async function autoTranscribeVideo(event) {
+            if (event) event.preventDefault();
+
+            if (isVideoUrlMode) {
+                if (!selectedVideoUrl) {
+                    showToast("❌ សូមបញ្ចូលតំណភ្ជាប់វីដេអូជាមុនសិន!");
+                    customAlert("សូមបញ្ចូលតំណភ្ជាប់វីដេអូជាមុនសិន!");
+                    return;
+                }
+            } else {
+                if (!selectedVideoFile) {
+                    showToast("❌ សូមជ្រើសរើសវីដេអូដើមជាមុនសិន!");
+                    customAlert("សូមជ្រើសរើសវីដេអូដើមជាមុនសិន!");
+                    return;
+                }
+            }
+
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (!isServer) {
+                showToast("❌ មុខងារនេះត្រូវការដំណើរការ server.py!");
+                customAlert("មុខងារបម្លែងសំឡេងស្វ័យប្រវត្តត្រូវការដំណើរការ server.py ជាមុនសិន!");
+                return;
+            }
+
+            // Open Progress Screen
+            document.getElementById('progress-screen').classList.add('open');
+            const pBar = document.getElementById('progress-bar');
+            const pPct = document.getElementById('progress-percentage');
+            const pTitle = document.getElementById('progress-title');
+            const pSub = document.getElementById('progress-sub');
+            const btnCancel = document.getElementById('btn-cancel-trans');
+            const successBox = document.getElementById('success-box');
+
+            if (pBar) {
+                pBar.style.width = '0%';
+                pBar.style.background = '';
+            }
+            if (pPct) pPct.innerText = '0%';
+            if (successBox) successBox.style.display = 'none';
+            if (btnCancel) {
+                btnCancel.style.display = 'block';
+                btnCancel.innerText = 'បោះបង់ (Cancel)';
+            }
+
+            pTitle.innerText = "🎙️ កំពុងត្រៀមបម្លែងសំឡេង...";
+            pSub.innerText = "កំពុងរៀបចំឯកសារវីដេអូ...";
+
+            const formData = new FormData();
+            if (isVideoUrlMode) {
+                formData.append('video_url', selectedVideoUrl);
+            } else {
+                formData.append('video', selectedVideoFile);
+            }
+            const langSelect = document.getElementById('transcribe-lang-select');
+            const langCode = langSelect ? langSelect.value : 'km-KH';
+            formData.append('language', langCode);
+            const geminiKey = ((document.getElementById('gemini-api-key') || {}).value || '').trim();
+            formData.append('gemini_key', geminiKey);
+
+            currentTranscribeAbortController = new AbortController();
+
+            // Simulate progress (STT chunk loading animation)
+            let progress = 0;
+            if (pBar) pBar.style.width = '10%';
+            if (pPct) pPct.innerText = '10%';
+            pTitle.innerText = "🔊 កំពុងទាញយក និងវិភាគសំឡេង...";
+            pSub.innerText = "កំពុងវិភាគចន្លោះស្ងាត់ (Silence detection)...";
+
+            const progressTimer = setInterval(() => {
+                progress += Math.floor(Math.random() * 3) + 1;
+                if (progress > 85) progress = 85;
+                if (pBar) pBar.style.width = progress + '%';
+                if (pPct) pPct.innerText = progress + '%';
+                if (progress > 30 && progress <= 60) {
+                    pTitle.innerText = geminiKey ? "🤖 កំពុងដំណើរការបម្លែងដោយ Gemini AI..." : "🎙️ កំពុងបម្លែងសំឡេងទៅជាអត្ថបទ (Google Speech API)...";
+                    pSub.innerText = geminiKey ? "Gemini 1.5 Flash - គុណភាពខ្ពស់បំផុត..." : "កំពុងស្គាល់ភាសាខ្មែរ (Recognizing Khmer speech)...";
+                } else if (progress > 60) {
+                    pTitle.innerText = "📝 កំពុងបង្កើត និងរៀបចំអក្សររត់ SRT...";
+                    pSub.innerText = "សូមរង់ចាំបន្តិចទៀត...";
+                }
+            }, 1000);
+
+            try {
+                const url = getApiUrl('/api/transcribe');
+                const response = await fetch(url, {
+                    method: 'POST',
+                    body: formData,
+                    signal: currentTranscribeAbortController.signal
+                });
+
+                clearInterval(progressTimer);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.success && data.srt) {
+                    if (pBar) pBar.style.width = '100%';
+                    if (pPct) pPct.innerText = '100%';
+                    pTitle.innerText = "🎉 ជោគជ័យ!";
+                    pSub.innerText = "បានបង្កើតអក្សររត់ SRT រួចរាល់!";
+
+                    srtTextContent = data.srt;
+                    
+                    document.getElementById('srt-text-wrapper').style.display = 'block';
+                    document.getElementById('srt-text-input').value = srtTextContent;
+                    document.getElementById('toggle-srt-mode').innerText = '➔ ប្រើប្រាស់ឯកសារ SRT (Use SRT File)';
+                    
+                    document.getElementById('status-srt').innerText = 'បានបង្កើតអក្សររត់រួចរាល់ (' + srtTextContent.split('\n\n').length + ' ប្រយោគ)';
+                    
+                    showToast('🎙️ Auto-transcribe ជោគជ័យ!');
+                    
+                    setTimeout(() => {
+                        document.getElementById('progress-screen').classList.remove('open');
+                    }, 1500);
+
+                } else {
+                    throw new Error(data.error || 'Unknown server error');
+                }
+
+            } catch (err) {
+                clearInterval(progressTimer);
+                if (err.name === 'AbortError') {
+                    console.log('Transcription cancelled.');
+                    return;
+                }
+                console.error('Transcription error:', err);
+                pTitle.innerText = 'បម្លែងបរាជ័យ!';
+                let msg = err.message || 'Unknown server error';
+                if (msg.includes('Failed to fetch') || msg.includes('NetworkError') || msg.includes('fetch')) {
+                    msg = "❌ មិនអាចភ្ជាប់ទៅកាន់ Server (http://localhost:8000) បានទេ! សូមពិនិត្យមើលថាតើ server.py ត្រូវបានបើក ឬ Reset Backend URL ក្នុង Setting";
+                }
+                pSub.innerText = msg;
+                if (pBar) pBar.style.background = 'linear-gradient(90deg, #ff4444, #ff6666)';
+                showToast('❌ Auto-transcribe Failed: ' + msg);
+                btnCancel.innerText = 'បិទ (Close)';
+            }
+        }
+
+        async function translateSrtToKhmer(event) {
+            if (event) event.preventDefault();
+
+            if (!srtTextContent || srtTextContent.trim() === "") {
+                showToast("❌ គ្មានខ្លឹមសារអក្សររត់សម្រាប់បកប្រែទេ!");
+                customAlert("សូមបញ្ចូល ឬបម្លែង SRT ជាមុនសិន!");
+                return;
+            }
+
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (!isServer) {
+                showToast("❌ មុខងារនេះត្រូវការដំណើរការ server.py!");
+                customAlert("មុខងារបកប្រែអត្ថបទត្រូវការដំណើរការ server.py ជាមុនសិន!");
+                return;
+            }
+
+            // Open Progress Screen
+            document.getElementById('progress-screen').classList.add('open');
+            const pBar = document.getElementById('progress-bar');
+            const pPct = document.getElementById('progress-percentage');
+            const pTitle = document.getElementById('progress-title');
+            const pSub = document.getElementById('progress-sub');
+            const btnCancel = document.getElementById('btn-cancel-trans');
+            const successBox = document.getElementById('success-box');
+            const geminiKey = ((document.getElementById('gemini-api-key') || {}).value || '').trim();
+
+            if (pBar) {
+                pBar.style.width = '0%';
+                pBar.style.background = '';
+            }
+            if (pPct) pPct.innerText = '0%';
+            if (successBox) successBox.style.display = 'none';
+            if (btnCancel) {
+                btnCancel.style.display = 'block';
+                btnCancel.innerText = 'បោះបង់ (Cancel)';
+            }
+
+            pTitle.innerText = "🌐 កំពុងបកប្រែជាភាសាខ្មែរ...";
+            pSub.innerText = "កំពុងផ្ញើអត្ថបទទៅកាន់ Server...";
+
+            let progress = 0;
+            if (pBar) pBar.style.width = '20%';
+            if (pPct) pPct.innerText = '20%';
+
+            const progressTimer = setInterval(() => {
+                progress += Math.floor(Math.random() * 5) + 2;
+                if (progress > 90) progress = 90;
+                if (pBar) pBar.style.width = progress + '%';
+                if (pPct) pPct.innerText = progress + '%';
+                pTitle.innerText = "🌐 កំពុងបកប្រែអត្ថបទប្រយោគនីមួយៗ...";
+                pSub.innerText = geminiKey ? "🤖 Gemini AI — បកប្រែតាមសាច់រឿងខ្មែរ (Gemini)..." : "រក្សាទុកសម្គាល់ (Female) / (Male) ឩួយនៅដដែល...";
+            }, 800);
+
+            try {
+                const url = getApiUrl('/api/translate');
+                const geminiKey = (document.getElementById('gemini-api-key') || {}).value || '';
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ srt: srtTextContent, gemini_key: geminiKey.trim() })
+                });
+
+                clearInterval(progressTimer);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP Error status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.success && data.srt) {
+                    pBar.style.width = '100%';
+                    pPct.innerText = '100%';
+                    pTitle.innerText = "🎉 បកប្រែជោគជ័យ!";
+                    pSub.innerText = "បានបកប្រែអត្ថបទទៅជាភាសាខ្មែររួចរាល់!";
+
+                    srtTextContent = data.srt;
+                    
+                    document.getElementById('srt-text-wrapper').style.display = 'block';
+                    document.getElementById('srt-text-input').value = srtTextContent;
+                    document.getElementById('toggle-srt-mode').innerText = '➔ ប្រើប្រាស់ឯកសារ SRT (Use SRT File)';
+                    
+                    document.getElementById('status-srt').innerText = 'បានបកប្រែរួចរាល់ (' + srtTextContent.split('\n\n').length + ' ប្រយោគ)';
+                    
+                    showToast('🌐 បកប្រែជាភាសាខ្មែរ ជោគជ័យ!');
+                    
+                    setTimeout(() => {
+                        document.getElementById('progress-screen').classList.remove('open');
+                    }, 1500);
+
+                } else {
+                    throw new Error(data.error || 'Unknown server error');
+                }
+
+            } catch (err) {
+                clearInterval(progressTimer);
+                console.error('Translation error:', err);
+                pTitle.innerText = 'បកប្រែបរាជ័យ!';
+                pSub.innerText = err.message || 'សូម check console ឬ restart server.py';
+                pBar.style.background = 'linear-gradient(90deg, #ff4444, #ff6666)';
+                showToast('❌ Translation Failed: ' + (err.message || 'Unknown error'));
+                btnCancel.innerText = 'បិទ (Close)';
+            }
+        }
+
+        function resetTranslation() {
+            isDubbedMode = false;
+            const previewPlayer = document.getElementById('preview-player');
+            if (previewPlayer) previewPlayer.pause();
+            if (currentTTSAudio) { currentTTSAudio.pause(); currentTTSAudio = null; }
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
+            document.getElementById('progress-screen').classList.remove('open');
+            showToast('សូមរៀបចំសារជាថ្មី');
+        }
+
+        // Fallback simple download (downloads local video renamed, or demo video)
+        function saveDubbedVideoFallback() {
+            let downloadUrl = "";
+            let filename = "dubbed_video.mp4";
+
+            if (selectedVideoFile && selectedVideoFile instanceof File) {
+                downloadUrl = URL.createObjectURL(selectedVideoFile);
+                const lastDot = selectedVideoFile.name.lastIndexOf('.');
+                if (lastDot !== -1) {
+                    filename = selectedVideoFile.name.substring(0, lastDot) + "_dubbed" + selectedVideoFile.name.substring(lastDot);
+                } else {
+                    filename = selectedVideoFile.name + "_dubbed.mp4";
+                }
+            } else {
+                downloadUrl = "https://www.w3schools.com/html/mov_bbb.mp4";
+                filename = "demo_dubbed_video.mp4";
+            }
+
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            if (selectedVideoFile && selectedVideoFile instanceof File) {
+                setTimeout(() => URL.revokeObjectURL(downloadUrl), 100);
+            }
+
+            customAlert("សាកល្បង៖ បានទាញយកឯកសារគំរូ " + filename + " រួចរាល់។");
+        }
+
+        // Download the dubbed video that was already compiled during startTranslation()
+        function saveDubbedVideo() {
+            // If we have a pre-compiled blob from server, just trigger a download immediately
+            if (dubbedVideoObjectUrl && dubbedVideoBlob) {
+                let filename = 'dubbed_video.mp4';
+                if (selectedVideoFile && selectedVideoFile instanceof File) {
+                    const lastDot = selectedVideoFile.name.lastIndexOf('.');
+                    if (lastDot !== -1) {
+                        filename = selectedVideoFile.name.substring(0, lastDot) + '_dubbed' + selectedVideoFile.name.substring(lastDot);
+                    } else {
+                        filename = selectedVideoFile.name + '_dubbed.mp4';
+                    }
+                } else {
+                    filename = 'demo_dubbed_video.mp4';
+                }
+
+                const a = document.createElement('a');
+                a.href = dubbedVideoObjectUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                const voiceName = (selectedVoice === 'Piseth' || selectedVoice === 'Chitra') ? 'ពិសិដ្ឋ' : 'ស្រីមុំ';
+                customAlert('ការទាញយកបានជោគជ័យ! \nវីដេអូបកប្រែជាមួយសំឡេង ' + voiceName + ' \nត្រូវបានរក្សាទុក៖ ' + filename);
+                return;
+            }
+
+            // Fallback: if no blob (e.g., file:// mode or page reload), show message
+            const customBackendUrl = (localStorage.getItem('backend_url') || '').trim();
+            const isServer = window.location.protocol.startsWith('http') || (customBackendUrl !== '');
+
+            if (!isServer) {
+                showToast('សូមដំណើរការ python server.py ដើម្បីបញ្ចូលសំឡេង និងទាញយកបាន!');
+                saveDubbedVideoFallback();
+                return;
+            }
+
+            // Should not normally reach here — dub happens in startTranslation
+            showToast('សូម click "ចាប់ផ្តើមបកប្រែ" ម្តងទៀត ដើម្បីបង្កើតវីដេអូ!');
+        }
+        function saveGeminiKey() {
+            const key = (document.getElementById('gemini-api-key') || {}).value || '';
+            localStorage.setItem('gemini_api_key', key.trim());
+            showToast('💾 បានរក្សាទុក Gemini API Key រួចរាល់!');
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedKey = localStorage.getItem('gemini_api_key') || '';
+            if (savedKey) {
+                const el = document.getElementById('gemini-api-key');
+                if (el) el.value = savedKey;
+            }
+        });
+
+        // ============================================================
+        //  VIDEO BLUR EDITOR
+        // ============================================================
+        let blurZones = [];          // [{x,y,w,h,blur}] in video-relative 0-1 coords
+        let blurTool = 'draw';       // 'draw' | 'select'
+        let blurDrawing = false;
+        let blurDragStart = null;
+        let blurSelectedIdx = -1;
+        let blurMoving = false;
+        let blurMoveOffset = {dx:0, dy:0};
+        const ZONE_COLORS = ['#00e5ff','#7c4dff','#ff6d00','#00e676','#ff1744','#ffea00','#40c4ff','#e040fb'];
+
+        function openBlurEditor(event) {
+            event.stopPropagation();
+            if (!selectedVideoFile && !selectedVideoUrl) {
+                showToast('⚠️ សូមជ្រើសរើសវីដេអូជាមុន!');
+                return;
+            }
+            const modal = document.getElementById('blur-editor-modal');
+            const vid   = document.getElementById('blur-preview-video');
+
+            // Load video source
+            if (selectedVideoFile) {
+                vid.src = URL.createObjectURL(selectedVideoFile);
+            } else {
+                vid.src = selectedVideoUrl;
+            }
+            vid.load();
+
+            modal.classList.add('open');
+
+            // Setup canvas once video metadata is ready
+            vid.onloadedmetadata = () => {
+                setupBlurCanvas();
+            };
+            vid.ontimeupdate = blurVideoTimeUpdate;
+        }
+
+        function closeBlurEditor() {
+            document.getElementById('blur-editor-modal').classList.remove('open');
+            const vid = document.getElementById('blur-preview-video');
+            vid.pause();
+        }
+
+        function setupBlurCanvas() {
+            const wrapper = document.getElementById('blur-canvas-wrapper');
+            const canvas  = document.getElementById('blur-canvas');
+            const vid     = document.getElementById('blur-preview-video');
+
+            // Sync canvas pixel size to wrapper display size
+            const resync = () => {
+                canvas.width  = wrapper.clientWidth;
+                canvas.height = wrapper.clientHeight;
+                renderBlurCanvas();
+            };
+            resync();
+            window.addEventListener('resize', resync);
+
+            // Mouse events
+            canvas.addEventListener('mousedown',  blurPointerDown);
+            canvas.addEventListener('mousemove',  blurPointerMove);
+            canvas.addEventListener('mouseup',    blurPointerUp);
+            canvas.addEventListener('mouseleave', blurPointerUp);
+
+            // Touch events
+            canvas.addEventListener('touchstart',  e => { e.preventDefault(); blurPointerDown(blurToMouse(e)); }, {passive:false});
+            canvas.addEventListener('touchmove',   e => { e.preventDefault(); blurPointerMove(blurToMouse(e)); }, {passive:false});
+            canvas.addEventListener('touchend',    e => { e.preventDefault(); blurPointerUp(); },                {passive:false});
+        }
+
+        function blurToMouse(e) {
+            const touch = e.touches[0] || e.changedTouches[0];
+            return { clientX: touch.clientX, clientY: touch.clientY };
+        }
+
+        function blurCanvasRelXY(e) {
+            const canvas = document.getElementById('blur-canvas');
+            const rect   = canvas.getBoundingClientRect();
+            return {
+                x: (e.clientX - rect.left) / rect.width,
+                y: (e.clientY - rect.top)  / rect.height
+            };
+        }
+
+        function setBlurTool(tool) {
+            blurTool = tool;
+            blurSelectedIdx = -1;
+            document.getElementById('blur-btn-draw').classList.toggle('active', tool === 'draw');
+            document.getElementById('blur-btn-select').classList.toggle('active', tool === 'select');
+            renderBlurCanvas();
+        }
+
+        function blurPointerDown(e) {
+            const pos = blurCanvasRelXY(e);
+            if (blurTool === 'draw') {
+                blurDrawing = true;
+                blurDragStart = pos;
+            } else {
+                // Select / move
+                blurSelectedIdx = -1;
+                for (let i = blurZones.length - 1; i >= 0; i--) {
+                    const z = blurZones[i];
+                    const x1 = Math.min(z.x, z.x + z.w), x2 = Math.max(z.x, z.x + z.w);
+                    const y1 = Math.min(z.y, z.y + z.h), y2 = Math.max(z.y, z.y + z.h);
+                    if (pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2) {
+                        blurSelectedIdx = i;
+                        blurMoving = true;
+                        blurMoveOffset = { dx: pos.x - z.x, dy: pos.y - z.y };
+                        break;
+                    }
+                }
+                renderBlurCanvas();
+            }
+        }
+
+        function blurPointerMove(e) {
+            const pos = blurCanvasRelXY(e);
+            if (blurTool === 'draw' && blurDrawing) {
+                renderBlurCanvas(blurDragStart, pos);
+            } else if (blurTool === 'select' && blurMoving && blurSelectedIdx >= 0) {
+                blurZones[blurSelectedIdx].x = pos.x - blurMoveOffset.dx;
+                blurZones[blurSelectedIdx].y = pos.y - blurMoveOffset.dy;
+                renderBlurCanvas();
+            }
+        }
+
+        function blurPointerUp() {
+            if (blurTool === 'draw' && blurDrawing && blurDragStart) {
+                const canvas = document.getElementById('blur-canvas');
+                const ctx    = canvas.getContext('2d');
+                // Get last draw position from canvas size vs start
+                const endPos = blurLastMovePos || blurDragStart;
+                const w = endPos.x - blurDragStart.x;
+                const h = endPos.y - blurDragStart.y;
+                if (Math.abs(w) > 0.01 && Math.abs(h) > 0.01) {
+                    const strength = parseInt(document.getElementById('blur-strength-slider').value);
+                    blurZones.push({
+                        x: blurDragStart.x,
+                        y: blurDragStart.y,
+                        w: w,
+                        h: h,
+                        blur: strength,
+                        color: ZONE_COLORS[blurZones.length % ZONE_COLORS.length]
+                    });
+                    updateBlurZonesList();
+                }
+            }
+            blurDrawing = false;
+            blurDragStart = null;
+            blurMoving = false;
+            blurLastMovePos = null;
+            renderBlurCanvas();
+        }
+
+        let blurLastMovePos = null;
+
+        // Patch move to also store last position
+        const _origBlurPointerMove = blurPointerMove;
+
+        document.getElementById('blur-canvas') && document.getElementById('blur-canvas')
+            .addEventListener('mousemove', e => {
+                blurLastMovePos = blurCanvasRelXY(e);
+            });
+
+        // Off-screen canvas for pixel-level blur sampling from video
+        let _blurOffscreen = null;
+        let _blurOffCtx    = null;
+
+        function renderBlurCanvas(dragStart, dragEnd) {
+            const canvas  = document.getElementById('blur-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const W = canvas.width, H = canvas.height;
+            ctx.clearRect(0, 0, W, H);
+
+            const vid = document.getElementById('blur-preview-video');
+            const hasVideo = vid && vid.readyState >= 2 && vid.videoWidth > 0;
+
+            blurZones.forEach((z, i) => {
+                const x = z.x * W, y = z.y * H;
+                const w = z.w * W, h = z.h * H;
+                const rx = Math.min(x, x+w), ry = Math.min(y, y+h);
+                const rw = Math.max(Math.abs(w), 1), rh = Math.max(Math.abs(h), 1);
+
+                const blurPx = Math.round(z.blur * 0.6); // 0.6 scale for canvas filter
+
+                if (hasVideo) {
+                    // ---- TRUE PIXEL BLUR: sample video frame → blur → stamp ----
+                    // Create / resize offscreen canvas to zone size
+                    if (!_blurOffscreen) {
+                        _blurOffscreen = document.createElement('canvas');
+                        _blurOffCtx    = _blurOffscreen.getContext('2d');
+                    }
+                    _blurOffscreen.width  = Math.ceil(rw);
+                    _blurOffscreen.height = Math.ceil(rh);
+
+                    // Map canvas coords → video coords
+                    const vW = vid.videoWidth,  vH = vid.videoHeight;
+                    // The video is letterboxed inside the canvas wrapper
+                    const wrapper = document.getElementById('blur-canvas-wrapper');
+                    const cW = wrapper.clientWidth, cH = wrapper.clientHeight;
+                    const scale = Math.min(cW / vW, cH / vH);
+                    const vDispW = vW * scale, vDispH = vH * scale;
+                    const vOffX  = (cW - vDispW) / 2, vOffY = (cH - vDispH) / 2;
+
+                    // Source rect in video pixel space
+                    const sX = Math.max(0, (rx - vOffX) / scale);
+                    const sY = Math.max(0, (ry - vOffY) / scale);
+                    const sW = Math.min(rw / scale, vW - sX);
+                    const sH = Math.min(rh / scale, vH - sY);
+
+                    if (sW > 0 && sH > 0) {
+                        // Draw the region from the video into the offscreen canvas
+                        _blurOffCtx.save();
+                        _blurOffCtx.filter = `blur(${blurPx}px)`;
+                        _blurOffCtx.drawImage(vid, sX, sY, sW, sH, 0, 0, _blurOffscreen.width, _blurOffscreen.height);
+                        _blurOffCtx.restore();
+
+                        // Stamp blurred pixels onto main canvas
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.rect(rx, ry, rw, rh);
+                        ctx.clip();
+                        ctx.drawImage(_blurOffscreen, rx, ry, rw, rh);
+                        ctx.restore();
+                    } else {
+                        // Fallback if mapping fails
+                        ctx.save();
+                        ctx.filter = `blur(${blurPx}px)`;
+                        ctx.drawImage(vid, rx, ry, rw, rh);
+                        ctx.filter = 'none';
+                        ctx.restore();
+                    }
+                } else {
+                    // No video available — show frosted placeholder
+                    ctx.save();
+                    ctx.filter = `blur(${blurPx}px)`;
+                    ctx.fillStyle = 'rgba(220,220,230,0.55)';
+                    ctx.fillRect(rx - blurPx, ry - blurPx, rw + blurPx*2, rh + blurPx*2);
+                    ctx.filter = 'none';
+                    ctx.restore();
+                }
+
+                // Very subtle frosted glass tint on top (almost transparent)
+                ctx.save();
+                ctx.beginPath();
+                ctx.rect(rx, ry, rw, rh);
+                ctx.clip();
+                ctx.fillStyle = 'rgba(255,255,255,0.08)';
+                ctx.fillRect(rx, ry, rw, rh);
+                ctx.restore();
+
+                // Border — thin, white/cyan dashed  
+                const isSelected = (blurTool === 'select' && i === blurSelectedIdx);
+                ctx.save();
+                ctx.strokeStyle = isSelected ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.55)';
+                ctx.lineWidth   = isSelected ? 2 : 1.2;
+                ctx.setLineDash(isSelected ? [] : [6, 4]);
+                ctx.shadowColor = isSelected ? 'rgba(0,229,255,0.8)' : 'rgba(255,255,255,0.3)';
+                ctx.shadowBlur  = isSelected ? 6 : 3;
+                ctx.strokeRect(rx + 0.5, ry + 0.5, rw - 1, rh - 1);
+                ctx.restore();
+
+                // Corner handles when selected
+                if (isSelected) {
+                    const handleSize = 6;
+                    const handles = [
+                        [rx, ry], [rx+rw, ry], [rx, ry+rh], [rx+rw, ry+rh],
+                        [rx+rw/2, ry], [rx+rw/2, ry+rh], [rx, ry+rh/2], [rx+rw, ry+rh/2]
+                    ];
+                    ctx.fillStyle = '#fff';
+                    ctx.shadowColor = 'rgba(0,229,255,0.8)';
+                    ctx.shadowBlur  = 6;
+                    handles.forEach(([hx, hy]) => {
+                        ctx.fillRect(hx - handleSize/2, hy - handleSize/2, handleSize, handleSize);
+                    });
+                    ctx.shadowBlur = 0;
+                }
+
+                // Zone label — small pill at top-left
+                const label = `🫥 Zone ${i+1}  (${z.blur}px)`;
+                ctx.font = 'bold 10px Inter, sans-serif';
+                const tw = ctx.measureText(label).width;
+                const lx = rx + 4, ly = ry + 4;
+                // Pill background
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.45)';
+                const r = 4;
+                const pw = tw + 10, ph = 16;
+                ctx.beginPath();
+                ctx.moveTo(lx + r, ly); ctx.lineTo(lx + pw - r, ly);
+                ctx.quadraticCurveTo(lx + pw, ly, lx + pw, ly + r);
+                ctx.lineTo(lx + pw, ly + ph - r);
+                ctx.quadraticCurveTo(lx + pw, ly + ph, lx + pw - r, ly + ph);
+                ctx.lineTo(lx + r, ly + ph);
+                ctx.quadraticCurveTo(lx, ly + ph, lx, ly + ph - r);
+                ctx.lineTo(lx, ly + r);
+                ctx.quadraticCurveTo(lx, ly, lx + r, ly);
+                ctx.closePath();
+                ctx.fill();
+                ctx.fillStyle = 'rgba(255,255,255,0.9)';
+                ctx.fillText(label, lx + 5, ly + 11);
+                ctx.restore();
+            });
+
+            // Live drag preview rectangle (while drawing)
+            if (dragStart && dragEnd) {
+                const x = dragStart.x * W, y = dragStart.y * H;
+                const w = (dragEnd.x - dragStart.x) * W;
+                const h = (dragEnd.y - dragStart.y) * H;
+
+                // Frosted preview of the would-be blur
+                if (hasVideo) {
+                    const rw2 = Math.abs(w), rh2 = Math.abs(h);
+                    const rx2 = Math.min(x, x+w), ry2 = Math.min(y, y+h);
+                    ctx.save();
+                    ctx.filter = 'blur(12px)';
+                    ctx.globalAlpha = 0.6;
+                    ctx.drawImage(vid, rx2, ry2, rw2, rh2);
+                    ctx.filter = 'none';
+                    ctx.globalAlpha = 1;
+                    ctx.restore();
+                }
+
+                ctx.save();
+                ctx.strokeStyle = 'rgba(0,229,255,0.95)';
+                ctx.lineWidth   = 1.5;
+                ctx.setLineDash([6, 3]);
+                ctx.shadowColor = 'rgba(0,229,255,0.6)';
+                ctx.shadowBlur  = 8;
+                ctx.strokeRect(x, y, w, h);
+                ctx.restore();
+                ctx.fillStyle = 'rgba(0,229,255,0.05)';
+                ctx.fillRect(x, y, w, h);
+            }
+        }
+
+        function updateBlurZonesList() {
+            const list  = document.getElementById('blur-zones-list');
+            const empty = document.getElementById('blur-zones-empty');
+            const count = document.getElementById('blur-zone-count');
+            count.innerText = blurZones.length;
+
+            // Clear old items except the empty message
+            Array.from(list.querySelectorAll('.blur-zone-item')).forEach(el => el.remove());
+
+            if (blurZones.length === 0) {
+                empty.style.display = 'block';
+                return;
+            }
+            empty.style.display = 'none';
+
+            blurZones.forEach((z, i) => {
+                const item = document.createElement('div');
+                item.className = 'blur-zone-item';
+                const x1p = Math.round(Math.min(z.x, z.x+z.w)*100);
+                const y1p = Math.round(Math.min(z.y, z.y+z.h)*100);
+                const wp  = Math.round(Math.abs(z.w)*100);
+                const hp  = Math.round(Math.abs(z.h)*100);
+                item.innerHTML = `
+                    <span class="zone-label">
+                        <span class="blur-zone-dot" style="background:${z.color}"></span>
+                        Zone ${i+1} &nbsp;|&nbsp; X:${x1p}% Y:${y1p}% &nbsp; W:${wp}% H:${hp}% &nbsp;|&nbsp; Blur: ${z.blur}px
+                    </span>
+                    <button class="blur-zone-del" onclick="deleteBlurZone(${i})" title="លុប Zone ${i+1}">✕</button>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function deleteBlurZone(idx) {
+            blurZones.splice(idx, 1);
+            if (blurSelectedIdx === idx) blurSelectedIdx = -1;
+            updateBlurZonesList();
+            renderBlurCanvas();
+        }
+
+        function deleteSelectedZone() {
+            if (blurSelectedIdx < 0) { showToast('⚠️ ជ្រើសរើស Zone ជាមុន!'); return; }
+            deleteBlurZone(blurSelectedIdx);
+            blurSelectedIdx = -1;
+        }
+
+        function clearAllBlurZones() {
+            blurZones = [];
+            blurSelectedIdx = -1;
+            updateBlurZonesList();
+            renderBlurCanvas();
+            showToast('🗑️ លុប Blur Zones ទំាងអស់ចេញ');
+        }
+
+        function applyBlurZones() {
+            if (blurZones.length === 0) {
+                showToast('⚠️ មិនទាន់មាន Blur Zone ណាមួយ!');
+                return;
+            }
+            // Update blur button badge
+            const btn = document.getElementById('btn-open-blur');
+            if (btn) {
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur (${blurZones.length})`;
+                btn.style.borderColor  = 'rgba(124,77,255,0.5)';
+                btn.style.background   = 'rgba(124,77,255,0.15)';
+                btn.style.color        = 'var(--color-purple)';
+            }
+            closeBlurEditor();
+            showToast(`✅ បានរក្សា Blur Zones ${blurZones.length} ចំណុច — នឹងដំណើរការពេល Generate!`);
+        }
+
+        function blurVideoPlayPause() {
+            const vid = document.getElementById('blur-preview-video');
+            const btn = document.getElementById('blur-play-btn');
+            if (vid.paused) { vid.play(); btn.textContent = '⏸ Pause'; }
+            else            { vid.pause(); btn.textContent = '▶ Play'; }
+        }
+
+        function blurVideoSeek(val) {
+            const vid = document.getElementById('blur-preview-video');
+            if (vid.duration) vid.currentTime = (val / 100) * vid.duration;
+        }
+
+        function blurVideoTimeUpdate() {
+            const vid  = document.getElementById('blur-preview-video');
+            const bar  = document.getElementById('blur-seek-bar');
+            const lbl  = document.getElementById('blur-time-label');
+            if (!vid || !bar) return;
+            const pct  = vid.duration ? (vid.currentTime / vid.duration) * 100 : 0;
+            bar.value  = pct;
+            const m    = Math.floor(vid.currentTime / 60);
+            const s    = Math.floor(vid.currentTime % 60);
+            lbl.textContent = `${m}:${String(s).padStart(2,'0')}`;
+        }
+
+        // Initialize canvas mouse tracking for drag-draw after DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('blur-canvas');
+            if (canvas) {
+                canvas.addEventListener('mousemove', e => {
+                    blurLastMovePos = blurCanvasRelXY(e);
+                    if (blurDrawing && blurDragStart) {
+                        renderBlurCanvas(blurDragStart, blurLastMovePos);
+                    }
+                });
+            }
+        });
+
+        // requestAnimationFrame loop: re-renders blur overlay while video is playing
+        // so the frosted glass blur stays in sync with the video frames
+        let _blurRafId = null;
+        function _blurRafLoop() {
+            const modal = document.getElementById('blur-editor-modal');
+            const vid   = document.getElementById('blur-preview-video');
+            if (modal && modal.classList.contains('open') && vid && !vid.paused) {
+                renderBlurCanvas();
+            }
+            _blurRafId = requestAnimationFrame(_blurRafLoop);
+        }
+        // Start the loop always; it's cheap when modal is closed
+        requestAnimationFrame(_blurRafLoop);
+    </script>
+</body>
+</html>
