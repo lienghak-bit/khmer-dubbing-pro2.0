@@ -22,8 +22,8 @@ def update_task_progress(task_id, msg):
     task['logs'].append(msg)
     task['message'] = msg
     
-    # Parse part progress: e.g. "📂 [ផ្នែកទី 2/4] កំពុងដំណើរការ..."
-    m_part = re.search(r"\[\u1795\u17d2\u179c\u17c2\u1780\u1791\u17b8\s*(\d+)/(\d+)\]", msg, re.IGNORECASE)
+    # Parse part or video progress: e.g. "📂 [វីដេអូទី 1/8]" or "📂 [ផ្នែកទី 2/4]"
+    m_part = re.search(r"\[.*?\s*(\d+)/(\d+)\]", msg)
     if m_part:
         current_part = int(m_part.group(1))
         total_parts = int(m_part.group(2))
@@ -792,33 +792,24 @@ async def compile_dubbed_video_backend(
                     escaped = os.path.abspath(pf).replace('\\', '/')
                     f.write(f"file '{escaped}'\n")
 
+            log_callback("⚙️ កំពុងតភ្ជាប់ និង Re-encode វីដេអូដើម្បីការពារការស្កុប/ទាក់រូបភាព...")
             concat_cmd = [
                 ffmpeg_exe, "-y",
                 "-f", "concat", "-safe", "0",
                 "-i", concat_txt,
-                "-c", "copy",
+                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
+                "-c:a", "aac",
+                "-avoid_negative_ts", "make_zero",
                 output_path
             ]
             res = subprocess.run(
                 concat_cmd,
-                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=600
+                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=900
             )
             if res.returncode == 0:
                 log_callback(f"🎉 ជោគជ័យ! បង្កើតវីដេអូសរុប {num_vids} ផ្នែករួចរាល់")
                 return True
             else:
-                log_callback("⚠️ Re-encoding concat...")
-                concat_cmd2 = [
-                    ffmpeg_exe, "-y",
-                    "-f", "concat", "-safe", "0",
-                    "-i", concat_txt,
-                    "-c:v", "libx264", "-c:a", "aac",
-                    output_path
-                ]
-                res2 = subprocess.run(concat_cmd2, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=900)
-                if res2.returncode == 0:
-                    log_callback(f"🎉 ជោគជ័យ! បង្កើតវីដេអូសរុប {num_vids} ផ្នែករួចរាល់")
-                    return True
                 err = res.stderr.decode('utf-8', errors='ignore')
                 log_callback(f"❌ កំហុសរួមបញ្ចូល: {err[:200]}")
                 return False
@@ -863,14 +854,15 @@ async def compile_dubbed_video_backend(
                     temp_video_part = os.path.join(split_temp_dir, f"video_part_{idx}.mp4")
                     temp_video_parts.append(temp_video_part)
 
-                    log_callback(f"✂️ កំពុងកាត់វីដេអូ {start_sec:.2f}s → {end_sec:.2f}s...")
+                    log_callback(f"✂️ កំពុងកាត់ និង Re-encode វីដេអូ {start_sec:.2f}s → {end_sec:.2f}s...")
                     split_cmd = [
                         ffmpeg_exe, "-y",
                         "-ss", f"{start_sec:.3f}",
                         "-to", f"{end_sec:.3f}",
                         "-i", video_path,
-                        "-c:v", "copy",
+                        "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
                         "-c:a", "aac",
+                        "-avoid_negative_ts", "make_zero",
                         temp_video_part
                     ]
                     res = subprocess.run(
@@ -910,23 +902,24 @@ async def compile_dubbed_video_backend(
                     part_files.append(part_output)
 
                 # 3. Concat all dubbed parts into final output
-                log_callback("\n🔗 កំពុងរួមបញ្ចូលវីដេអូទាំងអស់...")
+                log_callback("⚙️ កំពុងតភ្ជាប់ និង Re-encode វីដេអូដើម្បីការពារការស្កុប/ទាក់រូបភាព...")
                 concat_txt = os.path.join(split_temp_dir, "concat_parts.txt")
                 with open(concat_txt, 'w', encoding='utf-8') as f:
                     for pf in part_files:
                         escaped = os.path.abspath(pf).replace('\\', '/')
                         f.write(f"file '{escaped}'\n")
-
                 concat_cmd = [
                     ffmpeg_exe, "-y",
                     "-f", "concat", "-safe", "0",
                     "-i", concat_txt,
-                    "-c", "copy",
+                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
+                    "-c:a", "aac",
+                    "-avoid_negative_ts", "make_zero",
                     output_path
                 ]
                 res = subprocess.run(
                     concat_cmd,
-                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=300
+                    stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=600
                 )
                 if res.returncode == 0:
                     log_callback(f"🎉 ជោគជ័យ! វីដេអូពេញលេញរួចរាល់")
@@ -1052,6 +1045,8 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
                 "status": task['status'],
                 "progress_pct": task['progress_pct'],
                 "message": task['message'],
+                "current_part": task.get('current_part'),
+                "total_parts": task.get('total_parts'),
                 "error": task['error']
             }
             body = json.dumps(status_data, ensure_ascii=False).encode('utf-8')

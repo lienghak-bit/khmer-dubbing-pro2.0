@@ -2422,11 +2422,18 @@
                             return res.json();
                         })
                         .then(statusData => {
-                            // Update progress UI
                             const progressVal = statusData.progress_pct || 0;
                             pBar.style.width = progressVal + '%';
                             pPct.innerText = progressVal + '%';
-                            pTitle.innerText = statusData.message || "កំពុងដំណើរការ...";
+                            
+                            if (statusData.total_parts && statusData.total_parts > 1) {
+                                const cur = statusData.current_part || 1;
+                                const tot = statusData.total_parts;
+                                pTitle.innerText = `🎬 កំពុងបំលែង [${cur}/${tot}]...`;
+                                pSub.innerText = statusData.message || `កំពុងដំណើរការវីដេអូទី ${cur} នៃ ${tot}...`;
+                            } else {
+                                pTitle.innerText = statusData.message || "កំពុងដំណើរការ...";
+                            }
                             
                             if (statusData.status === 'completed') {
                                 clearInterval(translationInterval);
