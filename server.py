@@ -68,6 +68,38 @@ if sys.platform == 'win32':
         pass
 
 
+# Automatically clean up any leftover temporary folders and files from previous runs
+def cleanup_orphaned_temp_dirs():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    try:
+        for item in os.listdir(base_dir):
+            item_path = os.path.join(base_dir, item)
+            if os.path.isdir(item_path) and (
+                item.startswith("temp_srv_dub_") or 
+                item.startswith("temp_backend_dub_") or 
+                item.startswith("temp_transcribe_") or 
+                item.startswith("temp_srv_trans_") or
+                item.startswith("temp_split_srv_") or
+                item.startswith("temp_batch_srv_") or
+                item.startswith("temp_batch_tk_") or
+                item.startswith("temp_dubbing")
+            ):
+                try:
+                    shutil.rmtree(item_path, ignore_errors=True)
+                except Exception:
+                    pass
+            elif os.path.isfile(item_path) and (
+                (item.startswith("temp_tts_") or item.startswith("test_voice_")) and item.endswith(".mp3")
+            ):
+                try:
+                    os.remove(item_path)
+                except Exception:
+                    pass
+    except Exception as e:
+        print("Warning during temp cleanup:", e)
+
+cleanup_orphaned_temp_dirs()
+
 # Cloud deployment: PORT from environment (Railway/Render set this automatically)
 PORT = int(os.environ.get('PORT', 8000))
 HOST = '0.0.0.0'  # Listen on all interfaces (required for cloud)
@@ -423,8 +455,8 @@ def get_video_duration(video_path, ffmpeg_exe):
 
 
 def get_video_dimensions(video_path, ffmpeg_exe):
-    ffprobe_exe = ffmpeg_exe.replace('ffmpeg', 'ffprobe')
-    if os.path.exists(ffprobe_exe):
+    ffprobe_exe = shutil.which("ffprobe") or ffmpeg_exe.replace("ffmpeg", "ffprobe")
+    if ffprobe_exe and os.path.exists(ffprobe_exe):
         try:
             cmd = [
                 ffprobe_exe, "-v", "error",
@@ -438,11 +470,37 @@ def get_video_dimensions(video_path, ffmpeg_exe):
                 w, h = res.stdout.strip().split('x')
                 return int(w), int(h)
         except Exception as e:
-            print("ffprobe dimensions error:", e)
+            print("[Server] ffprobe dimensions error:", e)
+
+    # Robust fallback: parse ffmpeg -i output directly
+    try:
+        cmd = [ffmpeg_exe, "-i", video_path]
+        res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+        output = res.stderr
+        rotated = False
+        rot_match = re.search(r'rotate\s*:\s*(\d+)', output, re.IGNORECASE) or re.search(r'displaymatrix:\s*rotation\s*of\s*(-?\d+)', output, re.IGNORECASE)
+        if rot_match:
+            try:
+                deg = abs(int(float(rot_match.group(1))))
+                if deg in (90, 270):
+                    rotated = True
+            except Exception:
+                pass
+
+        m = re.search(r'Stream\s*#\d+:\d+.*Video:.*?[,\s](\d{2,5})x(\d{2,5})', output)
+        if m:
+            w, h = int(m.group(1)), int(m.group(2))
+            if rotated:
+                w, h = h, w
+            print(f"[Server] Probed video dimensions using ffmpeg: {w}x{h} (rotated={rotated})")
+            return w, h
+    except Exception as e:
+        print("[Server] Failed probing video dimensions with ffmpeg:", e)
+
     return 1920, 1080
 
 # Asynchronous compiler engine — handles ONE video + ONE SRT file
-async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, time_offset_ms=0, blur_zones=None):
+async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, time_offset_ms=0, blur_zones=None, mirror_video=False, task_id=None):
     temp_dir = f"temp_backend_dub_{uuid.uuid4()}"
     try:
         log_callback("Reading SRT file...")
@@ -467,11 +525,10 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
         else:
             ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
             
-        # 1. Calculate overall duration
+        # 1. Calculate overall duration safely (ensure subtitles near the end are never clipped)
         video_dur_sec = get_video_duration(video_path, ffmpeg_exe)
-        if not video_dur_sec:
-            video_dur_sec = (subtitles[-1]['end_ms'] / 1000.0) + 2.0
-        total_ms = int(video_dur_sec * 1000)
+        max_sub_end = max((s['end_ms'] for s in subtitles), default=0)
+        total_ms = max(int((video_dur_sec or 0) * 1000), max_sub_end + 3000)
         
         # Each ms represents 48 bytes (24000Hz * 2 bytes/sample * 1 channel)
         bytes_per_ms = 48
@@ -479,17 +536,22 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
         
         temp_files_to_clean = []
         rate_param = f"{speed_rate:+d}%" if speed_rate != 0 else "+0%"
-        
-        for i, sub in enumerate(subtitles):
-            log_callback(f"Generating TTS for subtitle {i+1}/{len(subtitles)}...")
-            
+
+        # Concurrency semaphore: up to 5 concurrent Edge-TTS requests for 3-5x faster dubbing
+        sem = asyncio.Semaphore(5)
+        completed_count = 0
+        total_subs = len(subtitles)
+
+        async def process_subtitle(i, sub):
+            nonlocal completed_count
+            if task_id and active_tasks.get(task_id, {}).get('status') in ('failed', 'cancelled'):
+                return i, sub, None
+
             temp_mp3 = os.path.join(temp_dir, f"temp_tts_{i}.mp3")
-            temp_files_to_clean.append(temp_mp3)
-            
             seg_voice = voice
             seg_pitch = None
             sub_text = sub['text'].strip()
-            
+
             if auto_voice:
                 if "(female)" in sub_text.lower():
                     seg_voice = 'km-KH-SreymomNeural'
@@ -502,14 +564,9 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
                 if tag_match:
                     seg_voice_val = tag_match.group(1).strip()
                     sub_text = tag_match.group(2).strip()
-                    
-                    if seg_voice_val.lower() == 'sreymom' or 'sreymom' in seg_voice_val.lower():
+                    if 'sreymom' in seg_voice_val.lower() or 'sokha' in seg_voice_val.lower():
                         seg_voice = 'km-KH-SreymomNeural'
-                    elif seg_voice_val.lower() == 'piseth' or 'piseth' in seg_voice_val.lower():
-                        seg_voice = 'km-KH-PisethNeural'
-                    elif seg_voice_val.lower() == 'sokha' or 'sokha' in seg_voice_val.lower():
-                        seg_voice = 'km-KH-SreymomNeural'
-                    elif seg_voice_val.lower() == 'chitra' or 'chitra' in seg_voice_val.lower():
+                    elif 'piseth' in seg_voice_val.lower() or 'chitra' in seg_voice_val.lower():
                         seg_voice = 'km-KH-PisethNeural'
                     else:
                         seg_voice = seg_voice_val
@@ -522,7 +579,6 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
                         elif seg_pitch.startswith(('-', '+')) and seg_pitch[1:].isdigit():
                             if not seg_pitch.endswith('Hz') and not seg_pitch.endswith('%'):
                                 seg_pitch = f"{seg_pitch}Hz"
-                    print(f"[Server Dubbing] Auto-detected tag: voice={seg_voice}, pitch={seg_pitch}")
             else:
                 if "(female)" in sub_text.lower():
                     sub_text = re.sub(r'\s*\(female\)', '', sub_text, flags=re.IGNORECASE).strip()
@@ -531,57 +587,59 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
                 sub_text = re.sub(r'<dubbing[^>]*>', '', sub_text, flags=re.IGNORECASE)
                 sub_text = re.sub(r'</dubbing>', '', sub_text, flags=re.IGNORECASE)
 
-            try:
-                engine_used = await generate_tts_mp3(sub_text, seg_voice, rate_param, temp_mp3, seg_pitch)
-                if engine_used != "edge-tts":
-                    log_callback(f"  Info: Subtitle {i+1} used {engine_used} (edge-tts unavailable)")
-            except Exception as e:
-                log_callback(f"  Warning: All TTS engines failed for subtitle {i+1}: {e} — inserting silence.")
-                continue
+            if not sub_text:
+                completed_count += 1
+                return i, sub, None
+
+            async with sem:
+                if task_id and active_tasks.get(task_id, {}).get('status') in ('failed', 'cancelled'):
+                    return i, sub, None
+                try:
+                    engine_used = await generate_tts_mp3(sub_text, seg_voice, rate_param, temp_mp3, seg_pitch)
+                    if engine_used != "edge-tts":
+                        log_callback(f"  Info: Subtitle {i+1} used {engine_used} (edge-tts fallback)")
+                except Exception as e:
+                    completed_count += 1
+                    log_callback(f"  Warning: All TTS engines failed for subtitle {i+1}: {e}")
+                    return i, sub, None
 
             if not os.path.exists(temp_mp3) or os.path.getsize(temp_mp3) == 0:
-                log_callback(f"  Warning: Empty TTS output for subtitle {i+1}, skipping.")
-                continue
-            
+                completed_count += 1
+                return i, sub, None
+
             chunk_wav = os.path.join(temp_dir, f"chunk_{i}.wav")
-            temp_files_to_clean.append(chunk_wav)
             cmd = [
                 ffmpeg_exe, "-y",
                 "-i", temp_mp3,
-                # FIX: Keep atrim to skip MP3 encoder delay (first 1024 samples are
-                # garbled transitional data from the MP3 codec warm-up).
-                # Fade-in/out will be applied in Python directly on the PCM buffer below.
                 "-filter:a", "atrim=start_sample=1024,asetpts=PTS-STARTPTS,aresample=24000",
                 "-ar", "24000",
                 "-ac", "1",
                 "-acodec", "pcm_s16le",
                 chunk_wav
             ]
-            transcode_result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-            
-            try:
-                os.remove(temp_mp3)
-            except Exception:
-                pass
-            
+            loop = asyncio.get_event_loop()
+            transcode_result = await loop.run_in_executor(
+                None,
+                lambda: subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+            )
+            try: os.remove(temp_mp3)
+            except Exception: pass
+
             if transcode_result.returncode != 0 or not os.path.exists(chunk_wav):
-                log_callback(f"  Warning: Transcode failed for subtitle {i+1}, skipping.")
-                continue
-            
+                completed_count += 1
+                return i, sub, None
+
             chunk_duration_ms = get_audio_duration_ms(ffmpeg_exe, chunk_wav)
             if chunk_duration_ms <= 0:
-                log_callback(f"  Warning: Could not determine duration for subtitle {i+1}, skipping.")
-                continue
-            
+                completed_count += 1
+                return i, sub, None
+
             allowed_duration_ms = max(sub['end_ms'] - sub['start_ms'], 300)
-            
             if allowed_duration_ms > 100:
                 tempo = chunk_duration_ms / allowed_duration_ms
                 if tempo > 1.05:
                     tempo = min(1.8, tempo)
                     speeded_wav = os.path.join(temp_dir, f"chunk_speed_{i}.wav")
-                    temp_files_to_clean.append(speeded_wav)
-                    print(f"[Server Dubbing] Subtitle {i+1} duration too long ({chunk_duration_ms}ms > {allowed_duration_ms}ms). Speeding up to {tempo:.2f}x...")
                     speed_cmd = [
                         ffmpeg_exe, "-y",
                         "-i", chunk_wav,
@@ -591,42 +649,61 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
                         "-acodec", "pcm_s16le",
                         speeded_wav
                     ]
-                    speed_result = subprocess.run(speed_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    speed_result = await loop.run_in_executor(
+                        None,
+                        lambda: subprocess.run(speed_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    )
                     if speed_result.returncode == 0 and os.path.exists(speeded_wav):
                         chunk_wav = speeded_wav
-            
-            with open(chunk_wav, 'rb') as wf:
-                wf.seek(44)
-                raw_pcm = wf.read()
 
+            raw_pcm = None
+            try:
+                with open(chunk_wav, 'rb') as wf:
+                    wf.seek(44)
+                    raw_pcm = wf.read()
+            except Exception:
+                pass
+            try: os.remove(chunk_wav)
+            except Exception: pass
+
+            completed_count += 1
+            log_callback(f"Generating TTS for subtitle {completed_count}/{total_subs}...")
+            return i, sub, raw_pcm
+
+        tasks = [process_subtitle(i, sub) for i, sub in enumerate(subtitles)]
+        results = await asyncio.gather(*tasks)
+
+        if task_id and active_tasks.get(task_id, {}).get('status') in ('failed', 'cancelled'):
+            log_callback("Operation cancelled.")
+            return False
+
+        for i, sub, raw_pcm in sorted(results, key=lambda r: r[0]):
+            if not raw_pcm:
+                continue
             start_byte = sub['start_ms'] * bytes_per_ms
             write_len = min(len(raw_pcm), len(final_pcm) - start_byte)
+            write_len = (write_len // 2) * 2
 
-            if write_len > 0 and write_len % 2 == 0:
+            if write_len > 0:
                 import struct, math
                 n_samples = write_len // 2
                 new_s = list(struct.unpack(f'<{n_samples}h', raw_pcm[:write_len]))
 
                 # IMPROVED FIX: 60ms cosine fade-in + fade-out on raw PCM samples.
-                # Cosine curve has zero derivative at both ends = no abrupt slope change
-                # = much smoother silence→speech transition than linear fade.
                 FADE_SAMPLES = 1440  # 60ms at 24000Hz
 
-                # Cosine fade-in: smooth ramp 0 → full
                 fade_in_len = min(FADE_SAMPLES, n_samples)
                 for fi in range(fade_in_len):
                     factor = (1.0 - math.cos(math.pi * fi / FADE_SAMPLES)) / 2.0
                     new_s[fi] = int(new_s[fi] * factor)
 
-                # Cosine fade-out: smooth ramp full → 0
                 fade_out_len = min(FADE_SAMPLES, n_samples)
                 for fo in range(fade_out_len):
                     idx = n_samples - 1 - fo
-                    if idx >= fade_in_len:  # Don't overlap with fade-in region
+                    if idx >= fade_in_len:
                         factor = (1.0 - math.cos(math.pi * fo / FADE_SAMPLES)) / 2.0
                         new_s[idx] = int(new_s[idx] * factor)
 
-                # Mix additively with clamping
                 existing = struct.unpack_from(f'<{n_samples}h', final_pcm, start_byte)
                 mixed = struct.pack(
                     f'<{n_samples}h',
@@ -702,34 +779,44 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
         v_codec = ["-c:v", "copy"]
         v_filter_str = ""
 
-        if blur_zones:
+        if mirror_video or blur_zones:
             vid_w, vid_h = get_video_dimensions(video_path, ffmpeg_exe)
-            log_callback(f"🎨 កំពុងដាក់ Blur {len(blur_zones)} ចំណុចលើវីដេអូ ({vid_w}x{vid_h})...")
             vf_parts = []
             curr_stream = "[0:v]"
-            for i, z in enumerate(blur_zones):
-                try:
-                    zx = int(min(z['x'], z['x'] + z['w']) * vid_w)
-                    zy = int(min(z['y'], z['y'] + z['h']) * vid_h)
-                    zw = int(abs(z['w']) * vid_w)
-                    zh = int(abs(z['h']) * vid_h)
-                    zx = max(0, min(vid_w - 2, (zx // 2) * 2))
-                    zy = max(0, min(vid_h - 2, (zy // 2) * 2))
-                    zw = max(2, min(vid_w - zx, (zw // 2) * 2))
-                    zh = max(2, min(vid_h - zy, (zh // 2) * 2))
-                    blur_strength = int(z.get('blur', 20))
-                    luma_r = max(4, min(40, blur_strength // 2))
 
-                    next_stream = f"[vblur_{i}]"
-                    vf_step = f"{curr_stream}split[vmain_{i}][vcrop_{i}]; [vcrop_{i}]crop={zw}:{zh}:{zx}:{zy},boxblur={luma_r}:2[vblur_sub_{i}]; [vmain_{i}][vblur_sub_{i}]overlay={zx}:{zy}{next_stream}"
-                    vf_parts.append(vf_step)
-                    curr_stream = next_stream
-                except Exception as e:
-                    print("Error processing blur zone:", e)
+            if mirror_video:
+                log_callback("🪞 កំពុងធ្វើ Mirror វីដេអូ (Flip Horizontal)...")
+                next_stream = "[v_mirrored]"
+                vf_parts.append(f"{curr_stream}hflip{next_stream}")
+                curr_stream = next_stream
+
+            if blur_zones:
+                log_callback(f"🎨 កំពុងដាក់ Blur {len(blur_zones)} ចំណុចលើវីដេអូ ({vid_w}x{vid_h})...")
+                for i, z in enumerate(blur_zones):
+                    try:
+                        zx = int(min(z['x'], z['x'] + z.get('w', 0)) * vid_w)
+                        zy = int(min(z['y'], z['y'] + z.get('h', 0)) * vid_h)
+                        zw = int(abs(z.get('w', 0)) * vid_w)
+                        zh = int(abs(z.get('h', 0)) * vid_h)
+                        
+                        zx = max(0, min(vid_w - 4, (zx // 2) * 2))
+                        zy = max(0, min(vid_h - 4, (zy // 2) * 2))
+                        zw = max(4, ((min(vid_w - zx, zw)) // 2) * 2)
+                        zh = max(4, ((min(vid_h - zy, zh)) // 2) * 2)
+                        
+                        blur_strength = int(z.get('blur', 20))
+                        sigma = max(3, min(30, blur_strength // 2))
+
+                        next_stream = f"[vblur_{i}]"
+                        vf_step = f"{curr_stream}split[vmain_{i}][vcrop_{i}]; [vcrop_{i}]crop={zw}:{zh}:{zx}:{zy},gblur=sigma={sigma}:steps=2[vblur_sub_{i}]; [vmain_{i}][vblur_sub_{i}]overlay={zx}:{zy}{next_stream}"
+                        vf_parts.append(vf_step)
+                        curr_stream = next_stream
+                    except Exception as e:
+                        print(f"[Server] Error processing blur zone {i}:", e)
             if vf_parts:
                 v_filter_str = "; ".join(vf_parts)
                 v_map = curr_stream
-                v_codec = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "22"]
+                v_codec = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "22", "-pix_fmt", "yuv420p"]
 
         if has_audio:
             audio_filter = (
@@ -785,7 +872,7 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
 # ── Orchestrator: splits video when multiple SRT files provided ──────────────
 async def compile_dubbed_video_backend(
     video_path, srt_paths_joined, voice, orig_vol, tts_vol,
-    vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, blur_zones=None
+    vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, blur_zones=None, mirror_video=False, task_id=None
 ):
     import shutil as _shutil
 
@@ -818,7 +905,7 @@ async def compile_dubbed_video_backend(
                 success = await compile_single_dub_backend(
                     current_video, current_srt, voice, orig_vol, tts_vol,
                     vocal_removed, speed_rate, part_output, log_callback, auto_voice,
-                    blur_zones=blur_zones
+                    blur_zones=blur_zones, mirror_video=mirror_video, task_id=task_id
                 )
                 if not success:
                     log_callback(f"❌ បញ្ចូលសំឡេងវីដេអូទី {part_num} បរាជ័យ")
@@ -867,7 +954,8 @@ async def compile_dubbed_video_backend(
             log_callback("Cannot get video duration — falling back to single-SRT mode with first SRT file only.")
             return await compile_single_dub_backend(
                 video_path, srt_paths[0], voice, orig_vol, tts_vol,
-                vocal_removed, speed_rate, output_path, log_callback, auto_voice
+                vocal_removed, speed_rate, output_path, log_callback, auto_voice,
+                blur_zones=blur_zones, mirror_video=mirror_video, task_id=task_id
             )
         else:
             num_parts = len(srt_paths)
@@ -933,7 +1021,7 @@ async def compile_dubbed_video_backend(
                     success = await compile_single_dub_backend(
                         temp_video_part, current_srt, voice, orig_vol, tts_vol,
                         vocal_removed, speed_rate, part_output, log_callback, auto_voice,
-                        time_offset_ms=time_offset_ms, blur_zones=blur_zones
+                        time_offset_ms=time_offset_ms, blur_zones=blur_zones, mirror_video=mirror_video, task_id=task_id
                     )
                     if not success:
                         log_callback(f"❌ បញ្ចូលសំឡេងផ្នែកទី {part_num} បរាជ័យ")
@@ -978,11 +1066,11 @@ async def compile_dubbed_video_backend(
     # ── SINGLE SRT MODE (default or when only 1 SRT given) ──────────────────────
     return await compile_single_dub_backend(
         video_path, srt_paths[0], voice, orig_vol, tts_vol,
-        vocal_removed, speed_rate, output_path, log_callback, auto_voice, blur_zones=blur_zones
+        vocal_removed, speed_rate, output_path, log_callback, auto_voice, blur_zones=blur_zones, mirror_video=mirror_video, task_id=task_id
     )
 
 
-def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, auto_voice, orig_filename, blur_zones=None):
+def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, auto_voice, orig_filename, blur_zones=None, mirror_video=False):
     loop = asyncio.new_event_loop()
     
     def log_callback(msg):
@@ -991,7 +1079,7 @@ def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_
     coro = compile_dubbed_video_backend(
         video_path, srt_paths_joined, voice,
         orig_vol, tts_vol, vocal_removed, speed_rate,
-        output_path, log_callback, auto_voice, blur_zones
+        output_path, log_callback, auto_voice, blur_zones, mirror_video, task_id=task_id
     )
     
     def run():
@@ -1070,6 +1158,21 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
         parsed_url = urllib.parse.urlparse(self.path)
         path = parsed_url.path.rstrip('/')
         print(f"[Server Request] GET {path}")
+
+        # --- /favicon.ico: Serve favicon ---
+        if parsed_url.path == '/favicon.ico':
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            icon_path = os.path.join(base_dir, "favicon.ico")
+            if not os.path.exists(icon_path):
+                icon_path = os.path.join(base_dir, "app_icon.ico")
+            if os.path.exists(icon_path):
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/x-icon')
+                self.send_header('Content-Length', str(os.path.getsize(icon_path)))
+                self.end_headers()
+                with open(icon_path, 'rb') as f:
+                    self.wfile.write(f.read())
+                return
 
         # --- /api/status: Polls progress and status of a dubbing task ---
         if path == '/api/status':
@@ -1254,6 +1357,21 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed_url.path.rstrip('/')
         print(f"[Server Request] POST {path}")
         
+        # Route cancel API
+        if path == '/api/cancel':
+            query = urllib.parse.parse_qs(parsed_url.query)
+            task_id = query.get('task_id', [''])[0]
+            if task_id in active_tasks:
+                active_tasks[task_id]['status'] = 'failed'
+                active_tasks[task_id]['error'] = 'Task was cancelled by user.'
+                active_tasks[task_id]['message'] = 'បោះបង់ដោយអ្នកប្រើប្រាស់'
+                print(f"[Server Task {task_id}] Cancelled by user request.")
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json; charset=utf-8')
+            self.end_headers()
+            self.wfile.write(b'{"success": true}')
+            return
+
         # Route the real video dubbing API
         if path == '/api/dub':
             content_type = self.headers.get('Content-Type', '')
@@ -1280,6 +1398,7 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
             tts_vol = int(form_data.get('tts_vol', '100'))
             vocal_removed = form_data.get('vocal_removed', 'false').lower() == 'true'
             auto_voice = form_data.get('auto_voice', 'false').lower() == 'true'
+            mirror_video = form_data.get('mirror_video', 'false').lower() == 'true'
             
             blur_zones_raw = form_data.get('blur_zones', '[]')
             try:
@@ -1429,7 +1548,7 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
             start_compilation_thread(
                 task_id, input_video_path, input_srt_joined, voice,
                 orig_vol, tts_vol, vocal_removed, speed_rate,
-                output_video_path, auto_voice, orig_filename, blur_zones
+                output_video_path, auto_voice, orig_filename, blur_zones, mirror_video
             )
 
             # Return task_id immediately
@@ -1450,6 +1569,15 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
                 data = json.loads(body_bytes.decode('utf-8'))
                 srt_content = data.get('srt', '')
                 gemini_key = data.get('gemini_key', '').strip()
+                if not gemini_key:
+                    key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gemini_key.txt")
+                    if os.path.exists(key_file):
+                        try:
+                            with open(key_file, "r", encoding="utf-8") as kf:
+                                gemini_key = kf.read().strip()
+                        except Exception:
+                            pass
+
                 if not srt_content:
                     self.send_error(400, "Missing srt content")
                     return
@@ -1500,16 +1628,38 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
                             f"SRT subtitles to translate:\n{srt_payload}"
                         )
                         
-                        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                        models_to_try = [
+                            "gemini-2.5-flash",
+                            "gemini-2.0-flash",
+                            "gemini-1.5-flash",
+                            "gemini-1.5-flash-latest"
+                        ]
+                        translated_srt_text = None
                         gemini_payload = json.dumps({
                             "contents": [{"parts": [{"text": prompt}]}],
                             "generationConfig": {"temperature": 0.2, "maxOutputTokens": 8192}
                         }).encode('utf-8')
-                        gemini_req = urllib.request.Request(gemini_url, data=gemini_payload,
-                            headers={"Content-Type": "application/json"}, method="POST")
-                        with urllib.request.urlopen(gemini_req, timeout=60) as gemini_resp:
-                            gemini_result = json.loads(gemini_resp.read().decode('utf-8'))
-                            translated_srt_text = gemini_result['candidates'][0]['content']['parts'][0]['text'].strip()
+
+                        for model_name in models_to_try:
+                            try:
+                                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={gemini_key}"
+                                gemini_req = urllib.request.Request(
+                                    gemini_url,
+                                    data=gemini_payload,
+                                    headers={"Content-Type": "application/json"},
+                                    method="POST"
+                                )
+                                with urllib.request.urlopen(gemini_req, timeout=60) as gemini_resp:
+                                    gemini_result = json.loads(gemini_resp.read().decode('utf-8'))
+                                    translated_srt_text = gemini_result['candidates'][0]['content']['parts'][0]['text'].strip()
+                                    if translated_srt_text:
+                                        print(f"[Server Translate] Gemini translation successful with model: {model_name}")
+                                        break
+                            except Exception as m_err:
+                                print(f"[Server Translate] Gemini model {model_name} failed: {m_err}")
+
+                        if not translated_srt_text:
+                            raise ValueError("All Gemini translation models failed.")
                         
                         gemini_blocks = translated_srt_text.strip().split('\n\n')
                         translated_lines = []
@@ -1666,6 +1816,14 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
                 
             lang_code = form_data.get('language', 'km-KH')
             gemini_key = form_data.get('gemini_key', '').strip()
+            if not gemini_key:
+                key_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "gemini_key.txt")
+                if os.path.exists(key_file):
+                    try:
+                        with open(key_file, "r", encoding="utf-8") as kf:
+                            gemini_key = kf.read().strip()
+                    except Exception:
+                        pass
                 
             temp_dir = f"temp_srv_trans_{uuid.uuid4()}"
             os.makedirs(temp_dir, exist_ok=True)
@@ -1753,8 +1911,9 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
                             }
                             
                             models_to_try = [
-                                "gemini-1.5-flash",
+                                "gemini-2.5-flash",
                                 "gemini-2.0-flash",
+                                "gemini-1.5-flash",
                                 "gemini-1.5-flash-latest"
                             ]
                             

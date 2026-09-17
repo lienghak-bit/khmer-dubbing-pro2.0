@@ -1013,18 +1013,20 @@
             overflow: hidden;
             border: 1px solid var(--border-standard);
             user-select: none;
-            /* Let the wrapper grow to fit the video, capped at available space */
-            flex: 1 1 auto;
-            min-height: 120px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 140px;
             max-height: calc(100vh - 280px);
         }
         .blur-editor-canvas-wrapper video {
             display: block;
-            width: 100%;
-            height: auto;
-            /* Match wrapper max height so video never overflows */
+            max-width: 100%;
             max-height: calc(100vh - 280px);
+            width: auto;
+            height: auto;
             object-fit: contain;
+            margin: 0 auto;
         }
         #blur-canvas {
             position: absolute;
@@ -1124,11 +1126,17 @@
             padding: 4px 0;
             line-height: 1.5;
         }
-        /* Blur trigger button on video card */
-        .blur-edit-btn {
+        /* Action buttons on video card (Mirror & Blur) */
+        .video-card-actions {
             position: absolute;
             bottom: 10px;
             right: 10px;
+            display: none;
+            align-items: center;
+            gap: 6px;
+            z-index: 6;
+        }
+        .blur-edit-btn {
             padding: 4px 10px;
             border-radius: 8px;
             border: 1px solid rgba(0,229,255,0.35);
@@ -1137,15 +1145,20 @@
             font-size: 10.5px;
             font-weight: 600;
             cursor: pointer;
-            display: none;
+            display: inline-flex;
             align-items: center;
             gap: 4px;
-            z-index: 6;
             transition: var(--transition);
         }
         .blur-edit-btn:hover {
             background: rgba(0,229,255,0.2);
             box-shadow: 0 0 10px rgba(0,229,255,0.3);
+        }
+        .blur-edit-btn.active {
+            border-color: rgba(0, 229, 255, 0.9);
+            background: rgba(0, 229, 255, 0.25);
+            color: #fff;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.5);
         }
         .blur-edit-btn svg { width: 11px; height: 11px; fill: currentColor; }
 
@@ -1260,11 +1273,17 @@
                         <button class="file-remove-btn" id="remove-video" onclick="clearFile(event, 'video')">
                             <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                         </button>
-                        <!-- Blur Editor Trigger Button -->
-                        <button class="blur-edit-btn" id="btn-open-blur" onclick="openBlurEditor(event)" title="ដាក់ Blur លើវីដេអូ">
-                            <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
-                            🎨 Blur
-                        </button>
+                        <!-- Video Card Actions: Mirror & Blur -->
+                        <div class="video-card-actions" id="video-card-actions">
+                            <button type="button" class="blur-edit-btn" id="btn-toggle-mirror" onclick="toggleMirrorVideo(event)" title="ត្រឡប់វីដេអូ ឆ្វេង-ស្តាំ (Mirror / Flip Horizontal)">
+                                <svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg>
+                                🪞 Mirror
+                            </button>
+                            <button type="button" class="blur-edit-btn" id="btn-open-blur" onclick="openBlurEditor(event)" title="ដាក់ Blur លើវីដេអូ">
+                                <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+                                🎨 Blur
+                            </button>
+                        </div>
                     </div>
 
                     <!-- Inline Main Video Preview Player -->
@@ -1484,12 +1503,19 @@
                     </div>
                     <div class="modal-option-row">
                         <span>ល្បឿនអានបកប្រែ (TTS Speed)</span>
-                        <select class="custom-select">
+                        <select class="custom-select" id="tts-speed-select">
                             <option value="0.9">យឺត (0.9x)</option>
                             <option value="1.0" selected>ធម្មតា (1.0x)</option>
                             <option value="1.15">លឿនល្មម (1.15x)</option>
                             <option value="1.25">លឿន (1.25x)</option>
                         </select>
+                    </div>
+                    <div class="modal-option-row">
+                        <span>ត្រឡប់វីដេអូ ឆ្វេង-ស្តាំ (Mirror Video)</span>
+                        <label class="switch" style="margin-right:0;">
+                            <input type="checkbox" id="toggle-mirror-video" onchange="setMirrorVideo(this.checked)">
+                            <span class="slider-toggle"></span>
+                        </label>
                     </div>
                 </div>
             </div>
@@ -2116,8 +2142,8 @@
                         statusEl.innerText = `${file.name} (${sizeMB} MB)`;
                         statusEl.classList.add('selected');
                         showToast(`បានបញ្ចូល៖ ${file.name}`);
-                        const blurBtn = document.getElementById('btn-open-blur');
-                        if (blurBtn) blurBtn.style.display = 'flex';
+                        const cardActions = document.getElementById('video-card-actions');
+                        if (cardActions) cardActions.style.display = 'flex';
                     } else {
                         // Multiple video batch mode
                         files.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
@@ -2126,8 +2152,8 @@
                         statusEl.innerText = `✅ បានជ្រើស ${files.length} វីដេអូ (Batch Mode)`;
                         statusEl.classList.add('selected');
                         showToast(`🎉 បានជ្រើសរើសវីដេអូសរុបចំនួន ${files.length} ឯកសារ!`);
-                        const blurBtn = document.getElementById('btn-open-blur');
-                        if (blurBtn) blurBtn.style.display = 'flex';
+                        const cardActions = document.getElementById('video-card-actions');
+                        if (cardActions) cardActions.style.display = 'flex';
                     }
 
                     const mainPreviewWrapper = document.getElementById('selected-video-preview-wrapper');
@@ -2188,17 +2214,14 @@
                 selectedVideoFile = null;
                 selectedVideoFiles = [];
                 statusEl.innerText = "មិនទាន់ជ្រើសរើសវីដេអូនៅឡើយទេ";
-                // Hide blur editor button and reset zones
-                const blurBtn = document.getElementById('btn-open-blur');
-                if (blurBtn) {
-                    blurBtn.style.display = 'none';
-                    blurBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur`;
-                    blurBtn.style.borderColor = 'rgba(0,229,255,0.35)';
-                    blurBtn.style.background = 'rgba(0,229,255,0.1)';
-                    blurBtn.style.color = 'var(--color-cyan)';
-                }
+                // Hide video action buttons and reset zones/mirror
+                const cardActions = document.getElementById('video-card-actions');
+                if (cardActions) cardActions.style.display = 'none';
+                isMirrorVideo = false;
+                updateMirrorUI();
                 blurZones = [];
                 updateBlurZonesList && updateBlurZonesList();
+                updateBlurButtonBadge && updateBlurButtonBadge();
 
                 const mainPreviewWrapper = document.getElementById('selected-video-preview-wrapper');
                 const mainPreviewPlayer  = document.getElementById('selected-video-preview');
@@ -2439,11 +2462,12 @@
                 formData.append('auto_voice', document.getElementById('toggle-auto-voice').checked);
                 formData.append('orig_vol', document.getElementById('slider-orig').value);
                 formData.append('tts_vol', document.getElementById('slider-tts').value);
-                formData.append('vocal_removed', document.getElementById('toggle-vocal').checked);
-                formData.append('speed_rate', speedSelect ? speedSelect.value : '1.0');
+                const speedSelect = document.getElementById('tts-speed-select') || document.querySelector('#settings-modal select:last-of-type');
+                formData.append('speed_rate', (speedSelect && speedSelect.value) ? speedSelect.value : '1.0');
                 if (typeof blurZones !== 'undefined' && blurZones.length > 0) {
                     formData.append('blur_zones', JSON.stringify(blurZones));
                 }
+                formData.append('mirror_video', isMirrorVideo ? 'true' : 'false');
 
                 // Send to server
                 currentFetchAbortController = new AbortController();
@@ -2465,6 +2489,7 @@
                     if (!taskId) {
                         throw new Error("Server did not return a valid Task ID.");
                     }
+                    window.activeDubbingTaskId = taskId;
                     
                     // Stop client-side fake animation and switch to real task progress polling
                     clearInterval(translationInterval);
@@ -2472,7 +2497,7 @@
                     // Polling interval
                     translationInterval = setInterval(() => {
                         fetch(getApiUrl(`/api/status?task_id=${taskId}`), {
-                            signal: currentFetchAbortController.signal
+                            signal: currentFetchAbortController ? currentFetchAbortController.signal : undefined
                         })
                         .then(res => {
                             if (!res.ok) throw new Error("Failed to fetch task status.");
@@ -2492,9 +2517,17 @@
                                 pTitle.innerText = statusData.message || "កំពុងដំណើរការ...";
                             }
                             
+                            if (statusData.status === 'failed') {
+                                clearInterval(translationInterval);
+                                translationInterval = null;
+                                window.activeDubbingTaskId = null;
+                                throw new Error(statusData.error || "ការបញ្ចូលសំឡេងបានបរាជ័យនៅលើ Server");
+                            }
+                            
                             if (statusData.status === 'completed') {
                                 clearInterval(translationInterval);
                                 translationInterval = null;
+                                window.activeDubbingTaskId = null;
                                 
                                 pTitle.innerText = 'កំពុងទាញយកវីដេអូ...';
                                 pSub.innerText = 'កំពុងផ្ទេរឯកសារត្រឡប់មកទូរសព្ទរបស់អ្នក';
@@ -2877,6 +2910,11 @@
         let currentTranscribeAbortController = null;
 
         function cancelTranslation() {
+            if (window.activeDubbingTaskId) {
+                const tid = window.activeDubbingTaskId;
+                window.activeDubbingTaskId = null;
+                fetch(getApiUrl(`/api/cancel?task_id=${tid}`), { method: 'POST' }).catch(() => {});
+            }
             if (translationInterval) {
                 clearInterval(translationInterval);
                 translationInterval = null;
@@ -3295,6 +3333,43 @@
         });
 
         // ============================================================
+        //  VIDEO MIRROR (HORIZONTAL FLIP)
+        // ============================================================
+        let isMirrorVideo = false;
+
+        function toggleMirrorVideo(event) {
+            if (event && event.stopPropagation) event.stopPropagation();
+            setMirrorVideo(!isMirrorVideo);
+        }
+
+        function setMirrorVideo(val) {
+            isMirrorVideo = !!val;
+            updateMirrorUI();
+            showToast(isMirrorVideo ? '🪞 បានបើក Mirror វីដេអូ (Flip Horizontal)' : '🪞 បានបិទ Mirror វីដេអូ');
+        }
+
+        function updateMirrorUI() {
+            const btn = document.getElementById('btn-toggle-mirror');
+            if (btn) {
+                if (isMirrorVideo) {
+                    btn.classList.add('active');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg> 🪞 Mirror (ON)`;
+                } else {
+                    btn.classList.remove('active');
+                    btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M6.99 11L3 15l3.99 4v-3H14v-2H6.99v-3zM21 9l-3.99-4v3H10v2h7.01v3L21 9z"/></svg> 🪞 Mirror`;
+                }
+            }
+            const chk = document.getElementById('toggle-mirror-video');
+            if (chk) chk.checked = isMirrorVideo;
+
+            const mainVid = document.getElementById('selected-video-preview');
+            if (mainVid) mainVid.style.transform = isMirrorVideo ? 'scaleX(-1)' : 'none';
+
+            const blurVid = document.getElementById('blur-preview-video');
+            if (blurVid) blurVid.style.transform = isMirrorVideo ? 'scaleX(-1)' : 'none';
+        }
+
+        // ============================================================
         //  VIDEO BLUR EDITOR
         // ============================================================
         let blurZones = [];          // [{x,y,w,h,blur}] in video-relative 0-1 coords
@@ -3320,6 +3395,7 @@
                 vid.src = newSrc;
                 vid.load();
             }
+            vid.style.transform = isMirrorVideo ? 'scaleX(-1)' : 'none';
 
             modal.classList.add('open');
 
@@ -3338,6 +3414,32 @@
             document.getElementById('blur-editor-modal').classList.remove('open');
             const vid = document.getElementById('blur-preview-video');
             vid.pause();
+            updateBlurButtonBadge();
+        }
+
+        function getVideoContentRect(vid) {
+            const vRect = vid.getBoundingClientRect();
+            if (!vid.videoWidth || !vid.videoHeight || vRect.width === 0 || vRect.height === 0) {
+                return { left: vRect.left, top: vRect.top, width: vRect.width, height: vRect.height };
+            }
+            const videoRatio = vid.videoWidth / vid.videoHeight;
+            const elemRatio  = vRect.width / vRect.height;
+            let w, h, left, top;
+
+            if (elemRatio > videoRatio) {
+                // Pillarbox: video is narrower than element, black bars on left and right
+                h = vRect.height;
+                w = h * videoRatio;
+                left = vRect.left + (vRect.width - w) / 2;
+                top  = vRect.top;
+            } else {
+                // Letterbox: video is wider than element, black bars on top and bottom
+                w = vRect.width;
+                h = w / videoRatio;
+                left = vRect.left;
+                top  = vRect.top + (vRect.height - h) / 2;
+            }
+            return { left, top, width: w, height: h };
         }
 
         let blurCanvasInitialized = false;
@@ -3346,26 +3448,28 @@
             const wrapper = document.getElementById('blur-canvas-wrapper');
             const canvas  = document.getElementById('blur-canvas');
             const vid     = document.getElementById('blur-preview-video');
+            if (!wrapper || !canvas || !vid) return;
 
-            // Sync canvas pixel size and CSS position to exact video rendered bounds
+            // Sync canvas pixel size and CSS position to EXACT visible video rendered frame (zero black bars)
             const resync = () => {
+                if (!vid.videoWidth || !vid.videoHeight) return;
                 const wRect = wrapper.getBoundingClientRect();
-                const vRect = vid.getBoundingClientRect();
+                const contentRect = getVideoContentRect(vid);
 
-                const offsetTop  = vRect.top  - wRect.top;
-                const offsetLeft = vRect.left - wRect.left;
-                const vW = vRect.width;
-                const vH = vRect.height;
+                const offsetTop  = contentRect.top  - wRect.top;
+                const offsetLeft = contentRect.left - wRect.left;
+                const vW = contentRect.width;
+                const vH = contentRect.height;
 
-                if (vW === 0 || vH === 0) return;
+                if (vW <= 0 || vH <= 0) return;
 
                 canvas.style.top    = offsetTop  + 'px';
                 canvas.style.left   = offsetLeft + 'px';
                 canvas.style.width  = vW + 'px';
                 canvas.style.height = vH + 'px';
 
-                canvas.width  = Math.round(vW);
-                canvas.height = Math.round(vH);
+                canvas.width  = Math.max(1, Math.round(vW));
+                canvas.height = Math.max(1, Math.round(vH));
 
                 renderBlurCanvas();
             };
@@ -3391,7 +3495,7 @@
             // Touch events
             canvas.addEventListener('touchstart',  e => { e.preventDefault(); blurPointerDown(blurToMouse(e)); }, {passive:false});
             canvas.addEventListener('touchmove',   e => { e.preventDefault(); blurPointerMove(blurToMouse(e)); }, {passive:false});
-            canvas.addEventListener('touchend',    e => { e.preventDefault(); blurPointerUp(); },                {passive:false});
+            canvas.addEventListener('touchend',    e => { e.preventDefault(); blurPointerUp(blurToMouse(e)); },   {passive:false});
         }
 
         function blurToMouse(e) {
@@ -3403,8 +3507,8 @@
             const canvas = document.getElementById('blur-canvas');
             const rect   = canvas.getBoundingClientRect();
             return {
-                x: (e.clientX - rect.left) / rect.width,
-                y: (e.clientY - rect.top)  / rect.height
+                x: Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width)),
+                y: Math.max(0, Math.min(1, (e.clientY - rect.top)  / rect.height))
             };
         }
 
@@ -3426,8 +3530,8 @@
                 blurSelectedIdx = -1;
                 for (let i = blurZones.length - 1; i >= 0; i--) {
                     const z = blurZones[i];
-                    const x1 = Math.min(z.x, z.x + z.w), x2 = Math.max(z.x, z.x + z.w);
-                    const y1 = Math.min(z.y, z.y + z.h), y2 = Math.max(z.y, z.y + z.h);
+                    const x1 = z.x, x2 = z.x + z.w;
+                    const y1 = z.y, y2 = z.y + z.h;
                     if (pos.x >= x1 && pos.x <= x2 && pos.y >= y1 && pos.y <= y2) {
                         blurSelectedIdx = i;
                         blurMoving = true;
@@ -3441,34 +3545,43 @@
 
         function blurPointerMove(e) {
             const pos = blurCanvasRelXY(e);
-            if (blurTool === 'draw' && blurDrawing) {
+            blurLastMovePos = pos;
+            if (blurTool === 'draw' && blurDrawing && blurDragStart) {
                 renderBlurCanvas(blurDragStart, pos);
             } else if (blurTool === 'select' && blurMoving && blurSelectedIdx >= 0) {
-                blurZones[blurSelectedIdx].x = pos.x - blurMoveOffset.dx;
-                blurZones[blurSelectedIdx].y = pos.y - blurMoveOffset.dy;
+                const z = blurZones[blurSelectedIdx];
+                z.x = Math.max(0, Math.min(1 - z.w, pos.x - blurMoveOffset.dx));
+                z.y = Math.max(0, Math.min(1 - z.h, pos.y - blurMoveOffset.dy));
                 renderBlurCanvas();
             }
         }
 
-        function blurPointerUp() {
+        function blurPointerUp(e) {
             if (blurTool === 'draw' && blurDrawing && blurDragStart) {
-                const canvas = document.getElementById('blur-canvas');
-                const ctx    = canvas.getContext('2d');
-                // Get last draw position from canvas size vs start
-                const endPos = blurLastMovePos || blurDragStart;
-                const w = endPos.x - blurDragStart.x;
-                const h = endPos.y - blurDragStart.y;
-                if (Math.abs(w) > 0.01 && Math.abs(h) > 0.01) {
-                    const strength = parseInt(document.getElementById('blur-strength-slider').value);
+                let endPos = blurLastMovePos || blurDragStart;
+                if (e && e.clientX !== undefined) {
+                    endPos = blurCanvasRelXY(e);
+                }
+                // Normalize coordinates properly so x,y is top-left, w,h positive and within [0, 1]
+                const x1 = Math.max(0, Math.min(1, Math.min(blurDragStart.x, endPos.x)));
+                const y1 = Math.max(0, Math.min(1, Math.min(blurDragStart.y, endPos.y)));
+                const x2 = Math.max(0, Math.min(1, Math.max(blurDragStart.x, endPos.x)));
+                const y2 = Math.max(0, Math.min(1, Math.max(blurDragStart.y, endPos.y)));
+                const w = x2 - x1;
+                const h = y2 - y1;
+
+                if (w > 0.005 && h > 0.005) {
+                    const strength = parseInt(document.getElementById('blur-strength-slider').value) || 20;
                     blurZones.push({
-                        x: blurDragStart.x,
-                        y: blurDragStart.y,
+                        x: x1,
+                        y: y1,
                         w: w,
                         h: h,
                         blur: strength,
                         color: ZONE_COLORS[blurZones.length % ZONE_COLORS.length]
                     });
                     updateBlurZonesList();
+                    updateBlurButtonBadge();
                 }
             }
             blurDrawing = false;
@@ -3476,17 +3589,10 @@
             blurMoving = false;
             blurLastMovePos = null;
             renderBlurCanvas();
+            updateBlurButtonBadge();
         }
 
         let blurLastMovePos = null;
-
-        // Patch move to also store last position
-        const _origBlurPointerMove = blurPointerMove;
-
-        document.getElementById('blur-canvas') && document.getElementById('blur-canvas')
-            .addEventListener('mousemove', e => {
-                blurLastMovePos = blurCanvasRelXY(e);
-            });
 
         // Off-screen canvas for pixel-level blur sampling from video
         let _blurOffscreen = null;
@@ -3512,7 +3618,6 @@
 
                 if (hasVideo) {
                     // ---- TRUE PIXEL BLUR: sample video frame → blur → stamp ----
-                    // Create / resize offscreen canvas to zone size
                     if (!_blurOffscreen) {
                         _blurOffscreen = document.createElement('canvas');
                         _blurOffCtx    = _blurOffscreen.getContext('2d');
@@ -3520,12 +3625,9 @@
                     _blurOffscreen.width  = Math.ceil(rw);
                     _blurOffscreen.height = Math.ceil(rh);
 
-                    // Map canvas coords → video intrinsic coords
-                    // Canvas is now exactly the same size as the video rendered display area
-                    // so we just scale by the ratio of video intrinsic size to canvas display size
                     const vW = vid.videoWidth,  vH = vid.videoHeight;
-                    const scaleX = vW / W;  // video intrinsic / canvas display width
-                    const scaleY = vH / H;  // video intrinsic / canvas display height
+                    const scaleX = vW / W;
+                    const scaleY = vH / H;
 
                     // Source rect in video pixel space
                     const sX = Math.max(0, rx * scaleX);
@@ -3534,10 +3636,16 @@
                     const sH = Math.min(rh * scaleY, vH - sY);
 
                     if (sW > 0 && sH > 0) {
-                        // Draw the region from the video into the offscreen canvas
                         _blurOffCtx.save();
                         _blurOffCtx.filter = `blur(${blurPx}px)`;
-                        _blurOffCtx.drawImage(vid, sX, sY, sW, sH, 0, 0, _blurOffscreen.width, _blurOffscreen.height);
+                        if (isMirrorVideo) {
+                            _blurOffCtx.translate(_blurOffscreen.width, 0);
+                            _blurOffCtx.scale(-1, 1);
+                            const srcX = Math.max(0, vW - sX - sW);
+                            _blurOffCtx.drawImage(vid, srcX, sY, sW, sH, 0, 0, _blurOffscreen.width, _blurOffscreen.height);
+                        } else {
+                            _blurOffCtx.drawImage(vid, sX, sY, sW, sH, 0, 0, _blurOffscreen.width, _blurOffscreen.height);
+                        }
                         _blurOffCtx.restore();
 
                         // Stamp blurred pixels onto main canvas
@@ -3548,7 +3656,6 @@
                         ctx.drawImage(_blurOffscreen, rx, ry, rw, rh);
                         ctx.restore();
                     } else {
-                        // Fallback if mapping fails
                         ctx.save();
                         ctx.filter = `blur(${blurPx}px)`;
                         ctx.drawImage(vid, rx, ry, rw, rh);
@@ -3692,11 +3799,28 @@
             });
         }
 
+        function updateBlurButtonBadge() {
+            const btn = document.getElementById('btn-open-blur');
+            if (!btn) return;
+            if (typeof blurZones !== 'undefined' && blurZones.length > 0) {
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur (${blurZones.length})`;
+                btn.style.borderColor  = 'rgba(124,77,255,0.7)';
+                btn.style.background   = 'rgba(124,77,255,0.22)';
+                btn.style.color        = 'var(--color-purple)';
+            } else {
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur`;
+                btn.style.borderColor = 'rgba(0,229,255,0.35)';
+                btn.style.background = 'rgba(0,229,255,0.1)';
+                btn.style.color = 'var(--color-cyan)';
+            }
+        }
+
         function deleteBlurZone(idx) {
             blurZones.splice(idx, 1);
             if (blurSelectedIdx === idx) blurSelectedIdx = -1;
             updateBlurZonesList();
             renderBlurCanvas();
+            updateBlurButtonBadge();
         }
 
         function deleteSelectedZone() {
@@ -3710,6 +3834,7 @@
             blurSelectedIdx = -1;
             updateBlurZonesList();
             renderBlurCanvas();
+            updateBlurButtonBadge();
             showToast('🗑️ លុប Blur Zones ទំាងអស់ចេញ');
         }
 
@@ -3718,14 +3843,7 @@
                 showToast('⚠️ មិនទាន់មាន Blur Zone ណាមួយ!');
                 return;
             }
-            // Update blur button badge
-            const btn = document.getElementById('btn-open-blur');
-            if (btn) {
-                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg> 🎨 Blur (${blurZones.length})`;
-                btn.style.borderColor  = 'rgba(124,77,255,0.5)';
-                btn.style.background   = 'rgba(124,77,255,0.15)';
-                btn.style.color        = 'var(--color-purple)';
-            }
+            updateBlurButtonBadge();
             closeBlurEditor();
             showToast(`✅ បានរក្សា Blur Zones ${blurZones.length} ចំណុច — នឹងដំណើរការពេល Generate!`);
         }
