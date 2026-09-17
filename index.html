@@ -985,36 +985,52 @@
 
         /* ===== VIDEO BLUR EDITOR ===== */
         #blur-editor-modal {
-            z-index: 200;
+            /* Override to fixed so it covers full viewport, not clipped by phone-frame */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 9999;
+            padding: 16px;
+            align-items: center;
         }
         #blur-editor-modal .modal-content {
-            max-width: 700px;
-            max-height: 90vh;
+            width: 95vw;
+            max-width: 1100px;
+            /* Use dvh so it works on mobile browsers too */
+            max-height: calc(100vh - 32px);
             overflow-y: auto;
-            padding: 20px;
-            gap: 12px;
+            padding: 14px 18px;
+            gap: 10px;
+            border-radius: 20px;
         }
         .blur-editor-canvas-wrapper {
             position: relative;
             width: 100%;
             background: #000;
-            border-radius: 12px;
+            border-radius: 14px;
             overflow: hidden;
             border: 1px solid var(--border-standard);
-            cursor: crosshair;
             user-select: none;
+            /* Let the wrapper grow to fit the video, capped at available space */
+            flex: 1 1 auto;
+            min-height: 120px;
+            max-height: calc(100vh - 280px);
         }
         .blur-editor-canvas-wrapper video {
             display: block;
             width: 100%;
-            max-height: 340px;
+            height: auto;
+            /* Match wrapper max height so video never overflows */
+            max-height: calc(100vh - 280px);
             object-fit: contain;
         }
         #blur-canvas {
             position: absolute;
             top: 0; left: 0;
-            width: 100%; height: 100%;
             cursor: crosshair;
+            /* width/height set dynamically by JS to match video rendered size */
         }
         .blur-toolbar {
             display: flex;
@@ -1249,6 +1265,16 @@
                             <svg viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
                             🎨 Blur
                         </button>
+                    </div>
+
+                    <!-- Inline Main Video Preview Player -->
+                    <div id="selected-video-preview-wrapper" style="margin-top: 8px; margin-bottom: 12px; display: none;">
+                        <div style="position: relative; border-radius: 14px; overflow: hidden; background: #000; border: 1px solid var(--border-standard); box-shadow: 0 8px 24px rgba(0,0,0,0.4);">
+                            <video id="selected-video-preview" controls playsinline style="width: 100%; max-height: 65vh; min-height: 220px; display: block; object-fit: contain; background: #000; outline: none; margin: 0 auto;"></video>
+                            <button type="button" onclick="toggleVideoFullscreen('selected-video-preview')" style="position: absolute; top: 10px; right: 10px; padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.65); backdrop-filter: blur(8px); color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px; z-index: 5;">
+                                🔍 Fullscreen (ពេញអេក្រង់)
+                            </button>
+                        </div>
                     </div>
                     <!-- Video URL Input Field (Collapsible) -->
                     <div id="video-url-wrapper" style="margin-top: -12px; margin-bottom: 8px; display: none;">
@@ -1510,20 +1536,20 @@
             <button class="cancel-btn" id="btn-cancel-trans" onclick="cancelTranslation()">បោះបង់ (Cancel)</button>
             
             <!-- Success Block (Hidden by default, shown at 100%) -->
-            <div class="success-actions" id="success-box" style="display: none; flex-direction: column; width: 100%; max-width: 500px;">
-                <div style="width: 100%; border: 1px solid var(--border-standard); padding: 12px; border-radius: 18px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.25);">
-                    <div style="font-size: 11.5px; font-weight: 600; color: var(--color-cyan); margin-bottom: 8px; text-align: center;">ទិន្នន័យចាក់សាកល្បង (Real-time Dubbed Preview)</div>
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.06);">
-                        <span style="font-size: 11px; color: var(--text-secondary);">ជ្រើសរើសសំឡេង៖</span>
-                        <select id="preview-voice-select" class="custom-select" style="padding: 4px 8px; font-size: 11px; border-radius: 8px; height: auto;" onchange="changePreviewVoice(this.value)">
+            <div class="success-actions" id="success-box" style="display: none; flex-direction: column; width: 100%; max-width: 720px;">
+                <div style="width: 100%; border: 1px solid var(--border-standard); padding: 14px; border-radius: 18px; margin-bottom: 12px; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(10px);">
+                    <div style="font-size: 13px; font-weight: 700; color: var(--color-cyan); margin-bottom: 10px; text-align: center;">🎬 ទិន្នន័យចាក់សាកល្បង (Real-time Dubbed Preview)</div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.08);">
+                        <span style="font-size: 11.5px; color: var(--text-secondary);">ជ្រើសរើសសំឡេង៖</span>
+                        <select id="preview-voice-select" class="custom-select" style="padding: 5px 10px; font-size: 11.5px; border-radius: 8px; height: auto;" onchange="changePreviewVoice(this.value)">
                             <option value="Piseth">ពិសិដ្ឋ (Piseth - Edge M)</option>
                             <option value="Sreymom">ស្រីមុំ (Sreymom - Edge F)</option>
                             <option value="Sokha">សុខា (Sokha - AI F)</option>
                             <option value="Chitra">ចិត្រា (Chitra - AI M)</option>
                         </select>
                     </div>
-                    <video id="preview-player" controls style="width: 100%; border-radius: 12px; display: block; outline: none; background: #000; max-height: 180px;"></video>
-                    <div id="preview-subtitles" style="font-size: 12.5px; color: #ffffff; margin-top: 10px; text-align: center; min-height: 38px; padding: 4px; line-height: 1.5; font-weight: 500; text-shadow: 0 1px 3px rgba(0,0,0,0.8);"></div>
+                    <video id="preview-player" controls style="width: 100%; max-height: 65vh; min-height: 220px; object-fit: contain; border-radius: 12px; display: block; outline: none; background: #000; margin: 0 auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);"></video>
+                    <div id="preview-subtitles" style="font-size: 13.5px; color: #ffffff; margin-top: 10px; text-align: center; min-height: 38px; padding: 6px; line-height: 1.5; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.9);"></div>
                 </div>
                 <button class="success-btn" onclick="saveDubbedVideo()">
                     <svg viewBox="0 0 24 24">
@@ -1553,7 +1579,7 @@
 
         <!-- ===== VIDEO BLUR EDITOR MODAL ===== -->
         <div class="modal" id="blur-editor-modal">
-            <div class="modal-content" style="max-width: 680px; max-height: 88vh; overflow-y: auto; padding: 20px; gap: 14px;">
+            <div class="modal-content" style="width: 95vw; max-width: 1100px; max-height: calc(100vh - 32px); overflow-y: auto; padding: 14px 18px; gap: 10px;">
                 <!-- Header -->
                 <div class="modal-header">
                     <div style="display:flex; align-items:center; gap: 10px;">
@@ -1598,7 +1624,7 @@
 
                 <!-- Video + Canvas Wrapper -->
                 <div class="blur-editor-canvas-wrapper" id="blur-canvas-wrapper">
-                    <video id="blur-preview-video" playsinline muted loop style="display:block;width:100%;max-height:320px;object-fit:contain;"></video>
+                    <video id="blur-preview-video" playsinline muted loop style="display:block; width:100%; height:auto; max-height:calc(100vh - 280px); object-fit:contain; background:#000;"></video>
                     <canvas id="blur-canvas"></canvas>
                 </div>
 
@@ -2059,6 +2085,20 @@
             return mergedBlocks;
         }
 
+        function toggleVideoFullscreen(videoId) {
+            const vid = document.getElementById(videoId);
+            if (!vid) return;
+            if (vid.requestFullscreen) {
+                vid.requestFullscreen();
+            } else if (vid.webkitRequestFullscreen) {
+                vid.webkitRequestFullscreen();
+            } else if (vid.msRequestFullscreen) {
+                vid.msRequestFullscreen();
+            } else if (vid.webkitEnterFullscreen) {
+                vid.webkitEnterFullscreen();
+            }
+        }
+
         // Handle file drop or selection
         function handleFileChange(input, type) {
             if (input.files && input.files.length > 0) {
@@ -2088,6 +2128,13 @@
                         showToast(`🎉 បានជ្រើសរើសវីដេអូសរុបចំនួន ${files.length} ឯកសារ!`);
                         const blurBtn = document.getElementById('btn-open-blur');
                         if (blurBtn) blurBtn.style.display = 'flex';
+                    }
+
+                    const mainPreviewWrapper = document.getElementById('selected-video-preview-wrapper');
+                    const mainPreviewPlayer  = document.getElementById('selected-video-preview');
+                    if (mainPreviewWrapper && mainPreviewPlayer && selectedVideoFile) {
+                        mainPreviewPlayer.src = URL.createObjectURL(selectedVideoFile);
+                        mainPreviewWrapper.style.display = 'block';
                     }
 
                 } else if (type === 'srt') {
@@ -2152,6 +2199,14 @@
                 }
                 blurZones = [];
                 updateBlurZonesList && updateBlurZonesList();
+
+                const mainPreviewWrapper = document.getElementById('selected-video-preview-wrapper');
+                const mainPreviewPlayer  = document.getElementById('selected-video-preview');
+                if (mainPreviewWrapper && mainPreviewPlayer) {
+                    mainPreviewPlayer.pause();
+                    mainPreviewPlayer.src = '';
+                    mainPreviewWrapper.style.display = 'none';
+                }
             } else if (type === 'srt') {
                 selectedSrtFile = null;
                 selectedSrtFiles = [];
@@ -2385,8 +2440,10 @@
                 formData.append('orig_vol', document.getElementById('slider-orig').value);
                 formData.append('tts_vol', document.getElementById('slider-tts').value);
                 formData.append('vocal_removed', document.getElementById('toggle-vocal').checked);
-                const speedSelect = document.querySelector('#settings-modal select:last-of-type');
                 formData.append('speed_rate', speedSelect ? speedSelect.value : '1.0');
+                if (typeof blurZones !== 'undefined' && blurZones.length > 0) {
+                    formData.append('blur_zones', JSON.stringify(blurZones));
+                }
 
                 // Send to server
                 currentFetchAbortController = new AbortController();
@@ -3250,7 +3307,7 @@
         const ZONE_COLORS = ['#00e5ff','#7c4dff','#ff6d00','#00e676','#ff1744','#ffea00','#40c4ff','#e040fb'];
 
         function openBlurEditor(event) {
-            event.stopPropagation();
+            if (event && event.stopPropagation) event.stopPropagation();
             if (!selectedVideoFile && !selectedVideoUrl) {
                 showToast('⚠️ សូមជ្រើសរើសវីដេអូជាមុន!');
                 return;
@@ -3258,18 +3315,20 @@
             const modal = document.getElementById('blur-editor-modal');
             const vid   = document.getElementById('blur-preview-video');
 
-            // Load video source
-            if (selectedVideoFile) {
-                vid.src = URL.createObjectURL(selectedVideoFile);
-            } else {
-                vid.src = selectedVideoUrl;
+            const newSrc = selectedVideoFile ? URL.createObjectURL(selectedVideoFile) : selectedVideoUrl;
+            if (vid.src !== newSrc) {
+                vid.src = newSrc;
+                vid.load();
             }
-            vid.load();
 
             modal.classList.add('open');
 
-            // Setup canvas once video metadata is ready
+            // Setup canvas immediately & when video metadata is ready
+            setupBlurCanvas();
             vid.onloadedmetadata = () => {
+                setupBlurCanvas();
+            };
+            vid.onloadeddata = () => {
                 setupBlurCanvas();
             };
             vid.ontimeupdate = blurVideoTimeUpdate;
@@ -3281,19 +3340,47 @@
             vid.pause();
         }
 
+        let blurCanvasInitialized = false;
+
         function setupBlurCanvas() {
             const wrapper = document.getElementById('blur-canvas-wrapper');
             const canvas  = document.getElementById('blur-canvas');
             const vid     = document.getElementById('blur-preview-video');
 
-            // Sync canvas pixel size to wrapper display size
+            // Sync canvas pixel size and CSS position to exact video rendered bounds
             const resync = () => {
-                canvas.width  = wrapper.clientWidth;
-                canvas.height = wrapper.clientHeight;
+                const wRect = wrapper.getBoundingClientRect();
+                const vRect = vid.getBoundingClientRect();
+
+                const offsetTop  = vRect.top  - wRect.top;
+                const offsetLeft = vRect.left - wRect.left;
+                const vW = vRect.width;
+                const vH = vRect.height;
+
+                if (vW === 0 || vH === 0) return;
+
+                canvas.style.top    = offsetTop  + 'px';
+                canvas.style.left   = offsetLeft + 'px';
+                canvas.style.width  = vW + 'px';
+                canvas.style.height = vH + 'px';
+
+                canvas.width  = Math.round(vW);
+                canvas.height = Math.round(vH);
+
                 renderBlurCanvas();
             };
-            resync();
+
+            // Trigger resync multiple times to account for layout/modal transitions
+            requestAnimationFrame(() => resync());
+            setTimeout(resync, 50);
+            setTimeout(resync, 150);
+            setTimeout(resync, 300);
+
+            if (blurCanvasInitialized) return;
+            blurCanvasInitialized = true;
+
             window.addEventListener('resize', resync);
+            vid.addEventListener('resize', resync);
 
             // Mouse events
             canvas.addEventListener('mousedown',  blurPointerDown);
@@ -3433,20 +3520,18 @@
                     _blurOffscreen.width  = Math.ceil(rw);
                     _blurOffscreen.height = Math.ceil(rh);
 
-                    // Map canvas coords → video coords
+                    // Map canvas coords → video intrinsic coords
+                    // Canvas is now exactly the same size as the video rendered display area
+                    // so we just scale by the ratio of video intrinsic size to canvas display size
                     const vW = vid.videoWidth,  vH = vid.videoHeight;
-                    // The video is letterboxed inside the canvas wrapper
-                    const wrapper = document.getElementById('blur-canvas-wrapper');
-                    const cW = wrapper.clientWidth, cH = wrapper.clientHeight;
-                    const scale = Math.min(cW / vW, cH / vH);
-                    const vDispW = vW * scale, vDispH = vH * scale;
-                    const vOffX  = (cW - vDispW) / 2, vOffY = (cH - vDispH) / 2;
+                    const scaleX = vW / W;  // video intrinsic / canvas display width
+                    const scaleY = vH / H;  // video intrinsic / canvas display height
 
                     // Source rect in video pixel space
-                    const sX = Math.max(0, (rx - vOffX) / scale);
-                    const sY = Math.max(0, (ry - vOffY) / scale);
-                    const sW = Math.min(rw / scale, vW - sX);
-                    const sH = Math.min(rh / scale, vH - sY);
+                    const sX = Math.max(0, rx * scaleX);
+                    const sY = Math.max(0, ry * scaleY);
+                    const sW = Math.min(rw * scaleX, vW - sX);
+                    const sH = Math.min(rh * scaleY, vH - sY);
 
                     if (sW > 0 && sH > 0) {
                         // Draw the region from the video into the offscreen canvas

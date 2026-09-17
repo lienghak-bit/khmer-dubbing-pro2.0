@@ -422,8 +422,27 @@ def get_video_duration(video_path, ffmpeg_exe):
     return None
 
 
+def get_video_dimensions(video_path, ffmpeg_exe):
+    ffprobe_exe = ffmpeg_exe.replace('ffmpeg', 'ffprobe')
+    if os.path.exists(ffprobe_exe):
+        try:
+            cmd = [
+                ffprobe_exe, "-v", "error",
+                "-select_streams", "v:0",
+                "-show_entries", "stream=width,height",
+                "-of", "csv=s=x:p=0",
+                video_path
+            ]
+            res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=10)
+            if res.returncode == 0 and 'x' in res.stdout:
+                w, h = res.stdout.strip().split('x')
+                return int(w), int(h)
+        except Exception as e:
+            print("ffprobe dimensions error:", e)
+    return 1920, 1080
+
 # Asynchronous compiler engine — handles ONE video + ONE SRT file
-async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, time_offset_ms=0):
+async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, time_offset_ms=0, blur_zones=None):
     temp_dir = f"temp_backend_dub_{uuid.uuid4()}"
     try:
         log_callback("Reading SRT file...")
@@ -679,43 +698,66 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
         if vocal_removed:
             orig_vol_ratio *= 0.15
             
+        v_map = "0:v"
+        v_codec = ["-c:v", "copy"]
+        v_filter_str = ""
+
+        if blur_zones:
+            vid_w, vid_h = get_video_dimensions(video_path, ffmpeg_exe)
+            log_callback(f"🎨 កំពុងដាក់ Blur {len(blur_zones)} ចំណុចលើវីដេអូ ({vid_w}x{vid_h})...")
+            vf_parts = []
+            curr_stream = "[0:v]"
+            for i, z in enumerate(blur_zones):
+                try:
+                    zx = int(min(z['x'], z['x'] + z['w']) * vid_w)
+                    zy = int(min(z['y'], z['y'] + z['h']) * vid_h)
+                    zw = int(abs(z['w']) * vid_w)
+                    zh = int(abs(z['h']) * vid_h)
+                    zx = max(0, min(vid_w - 2, (zx // 2) * 2))
+                    zy = max(0, min(vid_h - 2, (zy // 2) * 2))
+                    zw = max(2, min(vid_w - zx, (zw // 2) * 2))
+                    zh = max(2, min(vid_h - zy, (zh // 2) * 2))
+                    blur_strength = int(z.get('blur', 20))
+                    luma_r = max(4, min(40, blur_strength // 2))
+
+                    next_stream = f"[vblur_{i}]"
+                    vf_step = f"{curr_stream}split[vmain_{i}][vcrop_{i}]; [vcrop_{i}]crop={zw}:{zh}:{zx}:{zy},boxblur={luma_r}:2[vblur_sub_{i}]; [vmain_{i}][vblur_sub_{i}]overlay={zx}:{zy}{next_stream}"
+                    vf_parts.append(vf_step)
+                    curr_stream = next_stream
+                except Exception as e:
+                    print("Error processing blur zone:", e)
+            if vf_parts:
+                v_filter_str = "; ".join(vf_parts)
+                v_map = curr_stream
+                v_codec = ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "22"]
+
         if has_audio:
-            cmd = [
-                ffmpeg_exe, "-y",
-                "-i", video_path,
-                "-i", tts_wav_44100,   # Use pre-resampled 44100Hz stereo file
-                "-filter_complex",
-                # TTS is already 44100Hz stereo — only need volume + mix.
-                # No resampler artifacts at silence boundaries.
+            audio_filter = (
                 f"[0:a]aformat=sample_rates=44100:channel_layouts=stereo,volume={orig_vol_ratio:.3f}[orig]; "
                 f"[1:a]volume={tts_vol_ratio:.3f}[tts]; "
-                f"[orig][tts]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]",
-                "-map", "0:v",
-                "-map", "[aout]",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-ar", "44100",
-                "-ac", "2",
-                output_path
-            ]
+                f"[orig][tts]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[aout]"
+            )
         else:
-            # Silent video - use pre-resampled TTS track directly
-            cmd = [
-                ffmpeg_exe, "-y",
-                "-i", video_path,
-                "-i", tts_wav_44100,   # Pre-resampled 44100Hz stereo
-                "-filter_complex",
-                f"[1:a]volume={tts_vol_ratio:.3f}[aout]",
-                "-map", "0:v",
-                "-map", "[aout]",
-                "-c:v", "copy",
-                "-c:a", "aac",
-                "-b:a", "192k",
-                "-ar", "44100",
-                "-ac", "2",
-                output_path
-            ]
+            audio_filter = f"[1:a]volume={tts_vol_ratio:.3f}[aout]"
+
+        filter_complex = audio_filter
+        if v_filter_str:
+            filter_complex = f"{v_filter_str}; {audio_filter}"
+
+        cmd = [
+            ffmpeg_exe, "-y",
+            "-i", video_path,
+            "-i", tts_wav_44100,
+            "-filter_complex", filter_complex,
+            "-map", v_map,
+            "-map", "[aout]",
+        ] + v_codec + [
+            "-c:a", "aac",
+            "-b:a", "192k",
+            "-ar", "44100",
+            "-ac", "2",
+            output_path
+        ]
         
         process = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=600)
         
@@ -743,7 +785,7 @@ async def compile_single_dub_backend(video_path, srt_path, voice, orig_vol, tts_
 # ── Orchestrator: splits video when multiple SRT files provided ──────────────
 async def compile_dubbed_video_backend(
     video_path, srt_paths_joined, voice, orig_vol, tts_vol,
-    vocal_removed, speed_rate, output_path, log_callback, auto_voice=False
+    vocal_removed, speed_rate, output_path, log_callback, auto_voice=False, blur_zones=None
 ):
     import shutil as _shutil
 
@@ -775,7 +817,8 @@ async def compile_dubbed_video_backend(
                 part_output = f"{base_out}_vid{part_num}{ext_out}"
                 success = await compile_single_dub_backend(
                     current_video, current_srt, voice, orig_vol, tts_vol,
-                    vocal_removed, speed_rate, part_output, log_callback, auto_voice
+                    vocal_removed, speed_rate, part_output, log_callback, auto_voice,
+                    blur_zones=blur_zones
                 )
                 if not success:
                     log_callback(f"❌ បញ្ចូលសំឡេងវីដេអូទី {part_num} បរាជ័យ")
@@ -792,14 +835,12 @@ async def compile_dubbed_video_backend(
                     escaped = os.path.abspath(pf).replace('\\', '/')
                     f.write(f"file '{escaped}'\n")
 
-            log_callback("⚙️ កំពុងតភ្ជាប់ និង Re-encode វីដេអូដើម្បីការពារការស្កុប/ទាក់រូបភាព...")
+            log_callback("⚙️ កំពុងតភ្ជាប់វីដេអូ (stream copy - លឿន)...")
             concat_cmd = [
                 ffmpeg_exe, "-y",
                 "-f", "concat", "-safe", "0",
                 "-i", concat_txt,
-                "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
-                "-c:a", "aac",
-                "-avoid_negative_ts", "make_zero",
+                "-c", "copy",
                 output_path
             ]
             res = subprocess.run(
@@ -892,7 +933,7 @@ async def compile_dubbed_video_backend(
                     success = await compile_single_dub_backend(
                         temp_video_part, current_srt, voice, orig_vol, tts_vol,
                         vocal_removed, speed_rate, part_output, log_callback, auto_voice,
-                        time_offset_ms=time_offset_ms
+                        time_offset_ms=time_offset_ms, blur_zones=blur_zones
                     )
                     if not success:
                         log_callback(f"❌ បញ្ចូលសំឡេងផ្នែកទី {part_num} បរាជ័យ")
@@ -902,7 +943,7 @@ async def compile_dubbed_video_backend(
                     part_files.append(part_output)
 
                 # 3. Concat all dubbed parts into final output
-                log_callback("⚙️ កំពុងតភ្ជាប់ និង Re-encode វីដេអូដើម្បីការពារការស្កុប/ទាក់រូបភាព...")
+                log_callback("⚙️ កំពុងតភ្ជាប់វីដេអូ (stream copy - លឿន)...")
                 concat_txt = os.path.join(split_temp_dir, "concat_parts.txt")
                 with open(concat_txt, 'w', encoding='utf-8') as f:
                     for pf in part_files:
@@ -912,9 +953,7 @@ async def compile_dubbed_video_backend(
                     ffmpeg_exe, "-y",
                     "-f", "concat", "-safe", "0",
                     "-i", concat_txt,
-                    "-c:v", "libx264", "-preset", "ultrafast", "-crf", "22",
-                    "-c:a", "aac",
-                    "-avoid_negative_ts", "make_zero",
+                    "-c", "copy",
                     output_path
                 ]
                 res = subprocess.run(
@@ -939,11 +978,11 @@ async def compile_dubbed_video_backend(
     # ── SINGLE SRT MODE (default or when only 1 SRT given) ──────────────────────
     return await compile_single_dub_backend(
         video_path, srt_paths[0], voice, orig_vol, tts_vol,
-        vocal_removed, speed_rate, output_path, log_callback, auto_voice
+        vocal_removed, speed_rate, output_path, log_callback, auto_voice, blur_zones=blur_zones
     )
 
 
-def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, auto_voice, orig_filename):
+def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_vol, tts_vol, vocal_removed, speed_rate, output_path, auto_voice, orig_filename, blur_zones=None):
     loop = asyncio.new_event_loop()
     
     def log_callback(msg):
@@ -952,7 +991,7 @@ def start_compilation_thread(task_id, video_path, srt_paths_joined, voice, orig_
     coro = compile_dubbed_video_backend(
         video_path, srt_paths_joined, voice,
         orig_vol, tts_vol, vocal_removed, speed_rate,
-        output_path, log_callback, auto_voice
+        output_path, log_callback, auto_voice, blur_zones
     )
     
     def run():
@@ -1014,6 +1053,9 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', '*')
+        self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+        self.send_header('Pragma', 'no-cache')
+        self.send_header('Expires', '0')
         super().end_headers()
 
     def do_OPTIONS(self):
@@ -1239,6 +1281,12 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
             vocal_removed = form_data.get('vocal_removed', 'false').lower() == 'true'
             auto_voice = form_data.get('auto_voice', 'false').lower() == 'true'
             
+            blur_zones_raw = form_data.get('blur_zones', '[]')
+            try:
+                blur_zones = json.loads(blur_zones_raw)
+            except Exception:
+                blur_zones = []
+            
             # Calculate speed rate float to percentage change
             speed_val = form_data.get('speed_rate', '1.0')
             speed_rate = 0
@@ -1381,7 +1429,7 @@ class DubbingHandler(http.server.SimpleHTTPRequestHandler):
             start_compilation_thread(
                 task_id, input_video_path, input_srt_joined, voice,
                 orig_vol, tts_vol, vocal_removed, speed_rate,
-                output_video_path, auto_voice, orig_filename
+                output_video_path, auto_voice, orig_filename, blur_zones
             )
 
             # Return task_id immediately
